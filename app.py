@@ -3,6 +3,22 @@ import pandas as pd
 import streamlit as st
 import altair as alt
 from datetime import datetime
+import threading
+
+# --- IMPORTAR Y ARRANCAR EL BOT EN SEGUNDO PLANO ---
+def iniciar_bot():
+  # Importamos tu lógica del bot aquí dentro para que corra en su propio hilo
+  try:
+    import bot  # Asumiendo que tu archivo con la lógica del bot se llama bot.py
+  except Exception as e:
+    print(f'Error al iniciar el bot: {e}')
+
+
+# Usamos un indicador en session_state para que el hilo del bot solo se lance una vez
+if 'bot_iniciado' not in st.session_state:
+  st.session_state['bot_iniciado'] = True
+  hilo_bot = threading.Thread(target=iniciar_bot, daemon=True)
+  hilo_bot.start()
 
 # Configuración de la página web
 st.set_page_config(
