@@ -373,7 +373,10 @@ def webhook():
 
     return "ok", 200
   except Exception as e:
-    print(f"--- ERROR EN WEBHOOK ---: {e}")
+    import traceback
+
+    print("--- ERROR CRÍTICO EN WEBHOOK ---")
+    traceback.print_exc()
     return "error", 500
 
 
