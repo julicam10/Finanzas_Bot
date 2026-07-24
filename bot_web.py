@@ -5,6 +5,7 @@ from datetime import datetime
 from flask import Flask, request
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
+import requests
 
 TOKEN = os.getenv("TELEGRAM_TOKEN", "7770957118:AAHQTQ4PLdrJ1YRH3Z_U-9T1IB_3KXstLI0")
 
@@ -218,34 +219,171 @@ def home():
 
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
-  import asyncio
-
   try:
-    json_data = request.get_json(force=True)
-    update = Update.de_json(json_data, telegram_app.bot)
+    data = request.get_json(force=True)
 
-    # Creamos un loop limpio o reutilizamos el global de forma segura
-    try:
-      loop = asyncio.get_event_loop()
-      if loop.is_closed():
-        raise RuntimeError()
-    except RuntimeError:
-      loop = asyncio.new_event_loop()
-      asyncio.set_event_loop(loop)
+    # Verificamos que sea un mensaje de texto de Telegram
+    if "message" in data and "text" in data["message"]:
+      chat_id = data["message"]["chat"]["id"]
+      texto_usuario = data["message"]["text"]
+      fecha_hoy = datetime.now().strftime("%Y-%m-%d")
 
-    async def run_update():
-      if not telegram_app.running:
-        await telegram_app.initialize()
-      await telegram_app.process_update(update)
+      lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
+      if lineas:
+        primera_linea_lower = normalizar_texto(lineas[0])
 
-    loop.run_until_complete(run_update())
+        # CASO 1: ABONO A DEUDA
+        if "abono" in primera_linea_lower:
+          if len(lineas) < 3:
+            enviar_mensaje_telegram(
+                chat_id,
+                "⚠️ Formato de abono incompleto. Envíalo en 3 líneas: abono,"
+                " Monto, Nombre de la deuda.",
+            )
+            return "ok", 200
+
+          monto_str = (
+              lineas[1].replace("$", "").replace(".", "").replace(",", "")
+          )
+          monto = float(monto_str)
+          nombre_deuda_buscada = lineas[2]
+
+          deudas_db = consultar_sql(
+              "SELECT deuda, monto_total FROM deudas WHERE estado !="
+              " 'Completada'"
+          )
+          deuda_encontrada = None
+          for d in deudas_db:
+            if normalizar_texto(nombre_deuda_buscada) in normalizar_texto(d[0]):
+              deuda_encontrada = d[0]
+              saldo_actual = d[1]
+              break
+
+          if not deuda_encontrada:
+            enviar_mensaje_telegram(
+                chat_id,
+                f"⚠️ No encontré una deuda activa que coincida con"
+                f" '{nombre_deuda_buscada}'.",
+            )
+            return "ok", 200
+
+          nuevo_monto = max(0, saldo_actual - monto)
+          nuevo_estado = "Completada" if nuevo_monto == 0 else "Pendiente"
+          ejecutar_sql(
+              "UPDATE deudas SET monto_total = ?, estado = ? WHERE deuda = ?",
+              (nuevo_monto, nuevo_estado, deuda_encontrada),
+          )
+          ejecutar_sql(
+              "INSERT INTO log_abonos (fecha, tipo, referencia, monto) VALUES"
+              " (?, ?, ?, ?)",
+              (fecha_hoy, "Deuda", deuda_encontrada, monto),
+          )
+          enviar_mensaje_telegram(
+              chat_id,
+              f"💳 **¡Abono a deuda aplicado!**\n🎯 Deuda:"
+              f" {deuda_encontrada}\n💰 Monto Abonado: $ {monto:,.0f} COP\n📉"
+              f" Nuevo Saldo: $ {nuevo_monto:,.0f} COP",
+          )
+          return "ok", 200
+
+        # CASO 2: META DE AHORRO
+        elif "meta" in primera_linea_lower or "ahorro" in primera_linea_lower:
+          if len(lineas) < 3:
+            enviar_mensaje_telegram(
+                chat_id,
+                "⚠️ Formato de meta incompleto. Envíalo en 3 líneas: meta,"
+                " Monto, Nombre de la meta.",
+            )
+            return "ok", 200
+
+          monto_str = (
+              lineas[1].replace("$", "").replace(".", "").replace(",", "")
+          )
+          monto = float(monto_str)
+          nombre_meta_buscada = lineas[2]
+
+          metas_db = consultar_sql(
+              "SELECT nombre_meta, monto_actual, monto_objetivo FROM"
+              " metas_ahorro WHERE estado != 'Completada'"
+          )
+          meta_encontrada = None
+          for m in metas_db:
+            if normalizar_texto(nombre_meta_buscada) in normalizar_texto(m[0]):
+              meta_encontrada = m[0]
+              ahorro_actual = m[1]
+              monto_obj = m[2]
+              break
+
+          if not meta_encontrada:
+            enviar_mensaje_telegram(
+                chat_id,
+                f"⚠️ No encontré una meta en curso que coincida con"
+                f" '{nombre_meta_buscada}'.",
+            )
+            return "ok", 200
+
+          nuevo_ahorro = ahorro_actual + monto
+          nuevo_estado_meta = (
+              "Completada" if nuevo_ahorro >= monto_obj else "En curso"
+          )
+          ejecutar_sql(
+              "UPDATE metas_ahorro SET monto_actual = ?, estado = ? WHERE"
+              " nombre_meta = ?",
+              (nuevo_ahorro, nuevo_estado_meta, meta_encontrada),
+          )
+          ejecutar_sql(
+              "INSERT INTO log_abonos (fecha, tipo, referencia, monto) VALUES"
+              " (?, ?, ?, ?)",
+              (fecha_hoy, "Meta", meta_encontrada, monto),
+          )
+          enviar_mensaje_telegram(
+              chat_id,
+              f"💰 **¡Aporte a meta registrado!**\n🎯 Meta:"
+              f" {meta_encontrada}\n💵 Monto Sumado: $ {monto:,.0f} COP\n📈"
+              f" Total Ahorrado: $ {nuevo_ahorro:,.0f} COP",
+          )
+          return "ok", 200
+
+        # CASO 3: GASTO ESTÁNDAR
+        if len(lineas) < 3:
+          enviar_mensaje_telegram(
+              chat_id,
+              "⚠️ Formato incompleto. Envía los datos en 3 líneas:\nMonto\nConcepto\nMétodo"
+              " de pago",
+          )
+          return "ok", 200
+
+        monto_str = lineas[0].replace("$", "").replace(".", "").replace(",", "")
+        monto = float(monto_str)
+        concepto = lineas[1]
+        metodo_pago = lineas[2]
+        categoria = clasificar_gasto(concepto)
+
+        ejecutar_sql(
+            "INSERT INTO transacciones (fecha, concepto, categoria, monto,"
+            " metodo_pago) VALUES (?, ?, ?, ?, ?)",
+            (fecha_hoy, concepto, categoria, monto, metodo_pago),
+        )
+        enviar_mensaje_telegram(
+            chat_id,
+            f"✅ **Gasto registrado y clasificado:**\n💰 Monto: $ {monto:,.0f}"
+            f" COP\n📝 Concepto: {concepto}\n📂 Categoría:"
+            f" *{categoria}*\n💳 Método de Pago: *{metodo_pago}*",
+        )
+
     return "ok", 200
   except Exception as e:
-    print(f"--- ERROR CRÍTICO EN WEBHOOK ---: {e}")
-    import traceback
-
-    traceback.print_exc()
+    print(f"--- ERROR EN WEBHOOK ---: {e}")
     return "error", 500
+
+
+def enviar_mensaje_telegram(chat_id, texto):
+  url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+  payload = {"chat_id": chat_id, "text": texto, "parse_mode": "Markdown"}
+  try:
+    requests.post(url, json=payload)
+  except Exception as e:
+    print(f"Error enviando mensaje: {e}")
 
 
 if __name__ == "__main__":

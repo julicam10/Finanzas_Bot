@@ -31,30 +31,31 @@ def normalizar_texto(texto):
 def clasificar_gasto(concepto):
     c_lower = normalizar_texto(concepto)
     
-    if any(w in c_lower for w in ["s&p500", "tsmc"]):
+  # Mapeo basado en tu distribución oficial
+    if any(w in c_lower for w in ["S&P500", "TSMC"]):
         return "Inversión"
-    elif any(w in c_lower for w in ["fondeloitte", "ahorro personal", "ahorro ropa", "ahorro viajes"]):
+    elif any(w in c_lower for w in ["Fondeloitte", "Ahorro personal", "Ahorro ropa", "Ahorro viajes"]):
         return "Ahorro"
-    elif any(w in c_lower for w in ["arriendo"]):
+    elif any(w in c_lower for w in ["Arriendo"]):
         return "Casa / Obligaciones"
-    elif any(w in c_lower for w in ["huevo", "proteina", "carne", "d1", "ara", "exito", "fruta", "verdura"]):
+    elif any(w in c_lower for w in ["Huevo", "Proteina", "Carne", "D1", "Ara", "Éxito", "Fruta", "Verdura"]):
         return "Mercado"
-    elif any(w in c_lower for w in ["hamburguesa", "pizza", "papas king"]):
+    elif any(w in c_lower for w in ["Hamburguesa", "Pizza", "Papas king"]):
         return "Comida fuera"
-    elif any(w in c_lower for w in ["barberia", "gimnasio"]):
+    elif any(w in c_lower for w in ["Barberia", "Gimnasio"]):
         return "Bienestar y Cuidado"
-    elif any(w in c_lower for w in ["comida alma", "arena alma"]):
+    elif any(w in c_lower for w in ["Comida alma", "Arena alma"]):
         return "Mascota (Alma)"
-    elif any(w in c_lower for w in ["netflix", "youtube", "google fotos"]):
+    elif any(w in c_lower for w in ["Netflix", "Youtube", "Google fotos"]):
         return "Suscripciones"
-    elif any(w in c_lower for w in ["paquete de datos", "datos"]):
+    elif any(w in c_lower for w in ["Paquete de datos", "Datos"]):
         return "Servicios"
-    elif any(w in c_lower for w in ["credito hipotecario", "pago ipad", "t.c nu", "t.c bancolombia"]):
+    elif any(w in c_lower for w in ["Crédito hipotecario", "Pago iPad", "T.C Nu", "T.C Bancolombia"]):
         return "Pago deudas"
-    elif any(w in c_lower for w in ["salida con amigos", "transporte", "pasaje", "cine", "salida"]):
+    elif any(w in c_lower for w in ["Salida con amigos", "Transporte", "Pasaje", "Cine", "Salida"]):
         return "Gastos del mes"
     else:
-        return "Gastos del mes"
+        return "Gastos del mes" # Categoría por defecto si no coincide con ninguna
 
 async def manejar_mensaje(update: Update, context: ContextTypes.DEFAULT_TYPE):
     texto_usuario = update.message.text
