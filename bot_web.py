@@ -220,14 +220,32 @@ def home():
 def webhook():
   import asyncio
 
-  update = Update.de_json(request.get_json(force=True), telegram_app.bot)
+  try:
+    json_data = request.get_json(force=True)
+    update = Update.de_json(json_data, telegram_app.bot)
 
-  async def process():
-    await telegram_app.initialize()
-    await telegram_app.process_update(update)
+    # Creamos un loop limpio o reutilizamos el global de forma segura
+    try:
+      loop = asyncio.get_event_loop()
+      if loop.is_closed():
+        raise RuntimeError()
+    except RuntimeError:
+      loop = asyncio.new_event_loop()
+      asyncio.set_event_loop(loop)
 
-  asyncio.run(process())
-  return "ok", 200
+    async def run_update():
+      if not telegram_app.running:
+        await telegram_app.initialize()
+      await telegram_app.process_update(update)
+
+    loop.run_until_complete(run_update())
+    return "ok", 200
+  except Exception as e:
+    print(f"--- ERROR CRÍTICO EN WEBHOOK ---: {e}")
+    import traceback
+
+    traceback.print_exc()
+    return "error", 500
 
 
 if __name__ == "__main__":
