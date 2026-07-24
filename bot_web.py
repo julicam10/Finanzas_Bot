@@ -29,6 +29,53 @@ def consultar_sql(query, params=()):
   return resultados
 
 
+def inicializar_base_datos():
+  conexion = sqlite3.connect("finance_bot.db")
+  cursor = conexion.cursor()
+  cursor.execute("""
+        CREATE TABLE IF NOT EXISTS transacciones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fecha TEXT,
+            concepto TEXT,
+            categoria TEXT,
+            monto REAL,
+            metodo_pago TEXT
+        )
+    """)
+  cursor.execute("""
+        CREATE TABLE IF NOT EXISTS deudas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            deuda TEXT,
+            monto_total REAL,
+            estado TEXT
+        )
+    """)
+  cursor.execute("""
+        CREATE TABLE IF NOT EXISTS metas_ahorro (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre_meta TEXT,
+            monto_actual REAL,
+            monto_objetivo REAL,
+            estado TEXT
+        )
+    """)
+  cursor.execute("""
+        CREATE TABLE IF NOT EXISTS log_abonos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fecha TEXT,
+            tipo TEXT,
+            referencia TEXT,
+            monto REAL
+        )
+    """)
+  conexion.commit()
+  conexion.close()
+
+
+# Y justo antes de if __name__ == "__main__": o al iniciar la app, ejecútala:
+inicializar_base_datos()
+
+
 def normalizar_texto(texto):
   return "".join(
       c for c in unicodedata.normalize("NFD", texto) if unicodedata.category(c) != "Mn"
