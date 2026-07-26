@@ -5,20 +5,6 @@ import altair as alt
 from datetime import datetime
 import threading
 
-# --- IMPORTAR Y ARRANCAR EL BOT EN SEGUNDO PLANO ---
-def iniciar_bot():
-  try:
-    import bot  # Asegúrate de tener tu archivo bot.py original en la carpeta
-  except Exception as e:
-    print(f'Error al iniciar el bot: {e}')
-
-
-# Usamos un indicador en session_state para que el hilo del bot solo se lance una vez
-if 'bot_iniciado' not in st.session_state:
-  st.session_state['bot_iniciado'] = True
-  hilo_bot = threading.Thread(target=iniciar_bot, daemon=True)
-  hilo_bot.start()
-
 # Configuración de la página web
 st.set_page_config(
     page_title="Centro de Comando Financiero",
