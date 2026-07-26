@@ -7,9 +7,8 @@ import threading
 
 # --- IMPORTAR Y ARRANCAR EL BOT EN SEGUNDO PLANO ---
 def iniciar_bot():
-  # Importamos tu lógica del bot aquí dentro para que corra en su propio hilo
   try:
-    import bot  # Asumiendo que tu archivo con la lógica del bot se llama bot.py
+    import bot  # Asegúrate de tener tu archivo bot.py original en la carpeta
   except Exception as e:
     print(f'Error al iniciar el bot: {e}')
 
