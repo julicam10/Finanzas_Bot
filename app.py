@@ -61,54 +61,88 @@ except:
     df_log = pd.DataFrame()
 
 # Pestañas de navegación organizadas
-pestana_trans, pestana_presupuestos, pestana_deudas, pestana_metas, pestana_inversiones = st.tabs([
-    "📝 Transacciones", 
-    "🎯 Presupuestos & Tipos", 
+pestana_trans, pestana_historial, pestana_presupuestos, pestana_deudas, pestana_metas, pestana_inversiones = st.tabs([
+    "📝 Gastos del mes", 
+    "📅 Historial de gastos",
+    "🎯 Presupuestos", 
     "💳 Deudas", 
     "💰 Metas de Ahorro",
     "💎 Patrimonio & Inversiones"
 ])
 
 with pestana_trans:
-    st.subheader("Historial de Transacciones (Telegram)")
+    st.subheader("Gastos del Mes Actual")
+    
     if not df_transacciones.empty:
-        # Usamos st.data_editor para permitir edición en la web
-        df_editado = st.data_editor(
-            df_transacciones,
-            use_container_width=True,
-            num_rows="dynamic", # Permite agregar o eliminar filas
-            key="editor_transacciones",
-            hide_index=True
-        )
+        # 1. Obtener el mes actual (Ej. "2026-07")
+        mes_actual = datetime.now().strftime("%Y-%m")
         
-        # Botón para guardar los cambios en la base de datos
-        if st.button("💾 Guardar Cambios en Transacciones"):
-            conexion = sqlite3.connect("finance_bot.db")
-            cursor = conexion.cursor()
-            # Borramos los registros actuales y guardamos el dataframe editado
-            cursor.execute("DELETE FROM transacciones")
-            conexion.commit()
-            
-            df_editado.to_sql("transacciones", conexion, if_exists="append", index=False)
-            conexion.close()
-            
-            st.success("¡Transacciones actualizadas con éxito en la base de datos!")
-            st.rerun()
-            
-        st.markdown("---")
-        st.subheader("Gastos por Categoría")
-        df_categoria = df_transacciones.groupby('categoria')['monto'].sum().reset_index()
-        df_categoria.columns = ['Categoría', 'Monto']
+        # 2. Filtrar solo las transacciones que empiecen con ese mes
+        df_mes_actual = df_transacciones[df_transacciones['fecha'].str.startswith(mes_actual)].copy()
         
-        grafico = alt.Chart(df_categoria).mark_bar().encode(
-            x=alt.X('Categoría:N', sort='-y'),
-            y=alt.Y('Monto:Q', axis=alt.Axis(format=',.0f', title='Monto (COP)')),
-            color=alt.Color('Categoría:N', legend=None),
-            tooltip=['Categoría:N', alt.Tooltip('Monto:Q', format=',.0f')]
-        ).properties(height=350)
-        st.altair_chart(grafico, use_container_width=True)
+        if not df_mes_actual.empty:
+            df_editado = st.data_editor(
+                df_mes_actual,
+                use_container_width=True,
+                num_rows="dynamic",
+                key="editor_transacciones_mes",
+                hide_index=True
+            )
+            
+            if st.button("💾 Guardar Cambios del Mes"):
+                conexion = sqlite3.connect("finance_bot.db")
+                cursor = conexion.cursor()
+                
+                # Borramos SOLO los registros de este mes para proteger el historial
+                cursor.execute("DELETE FROM transacciones WHERE fecha LIKE ?", (f"{mes_actual}%",))
+                conexion.commit()
+                
+                # Insertamos la tabla editada
+                df_editado.to_sql("transacciones", conexion, if_exists="append", index=False)
+                conexion.close()
+                
+                st.success("¡Transacciones del mes actualizadas con éxito!")
+                st.rerun()
+                
+            st.markdown("---")
+            st.subheader("Gastos por Categoría (Mes Actual)")
+            df_categoria = df_mes_actual.groupby('categoria')['monto'].sum().reset_index()
+            df_categoria.columns = ['Categoría', 'Monto']
+            
+            grafico = alt.Chart(df_categoria).mark_bar().encode(
+                x=alt.X('Categoría:N', sort='-y'),
+                y=alt.Y('Monto:Q', axis=alt.Axis(format=',.0f', title='Monto (COP)')),
+                color=alt.Color('Categoría:N', legend=None),
+                tooltip=['Categoría:N', alt.Tooltip('Monto:Q', format=',.0f')]
+            ).properties(height=350)
+            st.altair_chart(grafico, use_container_width=True)
+        else:
+            st.info("Aún no hay transacciones registradas este mes. ¡Escríbele a tu bot de Telegram!")
     else:
-        st.info("Aún no hay transacciones registradas. ¡Escríbele a tu bot de Telegram!")
+        st.info("Aún no hay transacciones en la base de datos.")
+
+with pestana_historial:
+    st.subheader("📅 Historial de Transacciones por Mes")
+    
+    if not df_transacciones.empty:
+        # Extraer los meses únicos (Ej. "2026-06", "2026-07")
+        df_transacciones['Mes'] = df_transacciones['fecha'].str[:7]
+        meses_disponibles = sorted(df_transacciones['Mes'].unique(), reverse=True)
+        
+        # Selector de mes
+        mes_seleccionado = st.selectbox("Selecciona el mes que deseas consultar", meses_disponibles)
+        
+        # Filtrar datos por el mes seleccionado
+        df_mes_historial = df_transacciones[df_transacciones['Mes'] == mes_seleccionado].drop(columns=['Mes'])
+        
+        st.dataframe(df_mes_historial, use_container_width=True, hide_index=True)
+        
+        # Resumen rápido del mes
+        st.markdown("### Resumen del mes seleccionado")
+        total_mes = df_mes_historial['monto'].sum()
+        st.metric("Total Gastado", f"$ {total_mes:,.0f}".replace(",", "."))
+    else:
+        st.info("No hay historial disponible todavía.")
 
 with pestana_presupuestos:
     st.subheader("Gestión de Presupuestos (Enfoque 50/30/20)")

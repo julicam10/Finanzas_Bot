@@ -97,7 +97,7 @@ def clasificar_gasto(concepto):
     return "Casa / Obligaciones"
   elif any(
       w in c_lower
-      for w in ["Huevo", "Proteina", "Carne", "D1", "Ara", "Éxito", "Fruta", "Verdura"]
+      for w in ["Huevo", "Proteina", "Carne", "D1", "Ara", "Éxito", "Frutas", "Verduras", "Pollo"]
   ):
     return "Mercado"
   elif any(w in c_lower for w in ["Hamburguesa", "Pizza", "Arepas", "Papas king", "Comida fuera"]):
