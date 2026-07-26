@@ -125,7 +125,7 @@ with pestana_historial:
     st.subheader("📅 Historial de Transacciones por Mes")
     
     if not df_transacciones.empty:
-        # Extraer los meses únicos (Ej. "2026-06", "2026-07")
+        # Extraer los meses únicos
         df_transacciones['Mes'] = df_transacciones['fecha'].str[:7]
         meses_disponibles = sorted(df_transacciones['Mes'].unique(), reverse=True)
         
@@ -135,12 +135,31 @@ with pestana_historial:
         # Filtrar datos por el mes seleccionado
         df_mes_historial = df_transacciones[df_transacciones['Mes'] == mes_seleccionado].drop(columns=['Mes'])
         
+        # 1. Total gastado en la parte de arriba
+        total_mes = df_mes_historial['monto'].sum()
+        st.metric("Total Gastado en el Mes", f"$ {total_mes:,.0f}".replace(",", "."))
+        
+        st.markdown("---")
+        
+        # 2. Tabla de transacciones
+        st.markdown(f"### Detalle de Transacciones ({mes_seleccionado})")
         st.dataframe(df_mes_historial, use_container_width=True, hide_index=True)
         
-        # Resumen rápido del mes
-        st.markdown("### Resumen del mes seleccionado")
-        total_mes = df_mes_historial['monto'].sum()
-        st.metric("Total Gastado", f"$ {total_mes:,.0f}".replace(",", "."))
+        st.markdown("---")
+        
+        # 3. Gráfica por categoría de ese mes
+        st.subheader("Gastos por Categoría")
+        df_categoria_hist = df_mes_historial.groupby('categoria')['monto'].sum().reset_index()
+        df_categoria_hist.columns = ['Categoría', 'Monto']
+        
+        grafico_hist = alt.Chart(df_categoria_hist).mark_bar().encode(
+            x=alt.X('Categoría:N', sort='-y'),
+            y=alt.Y('Monto:Q', axis=alt.Axis(format=',.0f', title='Monto (COP)')),
+            color=alt.Color('Categoría:N', legend=None),
+            tooltip=['Categoría:N', alt.Tooltip('Monto:Q', format=',.0f')]
+        ).properties(height=350)
+        st.altair_chart(grafico_hist, use_container_width=True)
+        
     else:
         st.info("No hay historial disponible todavía.")
 
