@@ -72,13 +72,30 @@ pestana_trans, pestana_presupuestos, pestana_deudas, pestana_metas, pestana_inve
 with pestana_trans:
     st.subheader("Historial de Transacciones (Telegram)")
     if not df_transacciones.empty:
-        df_mostrar = df_transacciones.rename(columns={
-            'id': 'ID', 'fecha': 'Fecha', 'concepto': 'Concepto',
-            'categoria': 'Categoría', 'monto': 'Monto', 'metodo_pago': 'Método de Pago'
-        })
-        df_mostrar['Monto'] = df_mostrar['Monto'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-        st.dataframe(df_mostrar, use_container_width=True)
+        # Usamos st.data_editor para permitir edición en la web
+        df_editado = st.data_editor(
+            df_transacciones,
+            use_container_width=True,
+            num_rows="dynamic", # Permite agregar o eliminar filas
+            key="editor_transacciones",
+            hide_index=True
+        )
         
+        # Botón para guardar los cambios en la base de datos
+        if st.button("💾 Guardar Cambios en Transacciones"):
+            conexion = sqlite3.connect("finance_bot.db")
+            cursor = conexion.cursor()
+            # Borramos los registros actuales y guardamos el dataframe editado
+            cursor.execute("DELETE FROM transacciones")
+            conexion.commit()
+            
+            df_editado.to_sql("transacciones", conexion, if_exists="append", index=False)
+            conexion.close()
+            
+            st.success("¡Transacciones actualizadas con éxito en la base de datos!")
+            st.rerun()
+            
+        st.markdown("---")
         st.subheader("Gastos por Categoría")
         df_categoria = df_transacciones.groupby('categoria')['monto'].sum().reset_index()
         df_categoria.columns = ['Categoría', 'Monto']
