@@ -31,7 +31,7 @@ st.divider()
 
 # Cargar datos de la base de datos
 try:
-    df_transacciones = cargar_datos("SELECT * FROM transacciones ORDER BY id")
+    df_transacciones = cargar_datos("SELECT * FROM transacciones ORDER BY id DESC")
 except:
     df_transacciones = pd.DataFrame()
 
