@@ -240,22 +240,39 @@ with pestana_presupuestos:
             st.success(f"¡Presupuesto para {cat_input} guardado exitosamente!")
             st.rerun()
 
-    st.markdown("---")
-    st.subheader("Tus Presupuestos Registrados")
+st.markdown("---")
+    st.subheader("📋 Editar Tus Presupuestos Registrados")
+    
     if not df_presupuestos.empty:
-        if total_presupuestado > 0:
-            df_presupuestos['Porcentaje'] = (df_presupuestos['limite'] / total_presupuestado) * 100
-            df_presupuestos['Porcentaje_Str'] = df_presupuestos['Porcentaje'].apply(lambda x: f"{x:.2f}%")
-        else:
-            df_presupuestos['Porcentaje_Str'] = "0.00%"
-            
-        df_presup_mostrar = df_presupuestos.rename(columns={
-            'id': 'ID', 'mes': 'Mes', 'categoria': 'Categoría', 
-            'tipo': 'Tipo', 'limite': 'Límite (COP)', 'Porcentaje_Str': '% del Total'
-        })
-        df_presup_mostrar['Límite (COP)'] = df_presup_mostrar['Límite (COP)'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-        st.dataframe(df_presup_mostrar, use_container_width=True)
+        # Seleccionamos solo las columnas originales para evitar errores al guardar
+        columnas_db = ['id', 'mes', 'categoria', 'tipo', 'limite']
+        # Por seguridad comprobamos que existan, si no, usamos el df original
+        df_editar = df_presupuestos[columnas_db].copy() if set(columnas_db).issubset(df_presupuestos.columns) else df_presupuestos
         
+        # Mostramos el editor interactivo en vez del dataframe estático
+        df_pres_editado = st.data_editor(
+            df_editar,
+            use_container_width=True,
+            num_rows="dynamic",
+            key="editor_presupuestos",
+            hide_index=True
+        )
+        
+        # Botón para guardar los cambios
+        if st.button("💾 Guardar Cambios en Presupuestos"):
+            conexion = sqlite3.connect("finance_bot.db")
+            cursor = conexion.cursor()
+            
+            cursor.execute("DELETE FROM presupuestos")
+            conexion.commit()
+            
+            df_pres_editado.to_sql("presupuestos", conexion, if_exists="append", index=False)
+            conexion.close()
+            
+            st.success("¡Presupuestos actualizados con éxito!")
+            st.rerun()
+            
+        # --- Mantenemos tu gráfica circular intacta debajo de la tabla ---
         st.markdown("### 📊 Distribución por Tipo de Gasto / Inversión")
         df_tipo_resumen = df_presupuestos.groupby('tipo')['limite'].sum().reset_index()
         df_tipo_resumen['Porcentaje'] = (df_tipo_resumen['limite'] / total_presupuestado) * 100 if total_presupuestado > 0 else 0
