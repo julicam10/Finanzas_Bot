@@ -23,17 +23,16 @@ def ejecutar_sql(query, params=()):
 
 def cargar_datos(query):
     try:
+        # Formateamos la URL para que sea compatible con SQLAlchemy
         url_db = os.environ.get("DATABASE_URL").replace("postgres://", "postgresql://")
-        engine = create_engine(url_db)
         
-        # Conexión formal y envoltorio text() requeridos por SQLAlchemy 2.0+
-        with engine.connect() as conexion:
-            df = pd.read_sql(text(query), conexion)
-            
+        # Le pasamos la URL cruda directamente. Pandas hará la magia por debajo.
+        df = pd.read_sql(query, url_db)
+        
         return df
     except Exception as e:
-        # Trazabilidad: ahora si falla, lo veremos claramente en el log de Render
-        print(f"🚨 ERROR FATAL AL CARGAR DATOS ({query}): {e}")
+        # Si algo falla, el log nos dirá exactamente qué fue
+        print(f"🚨 ERROR AL LEER BD ({query}): {e}")
         return pd.DataFrame()
 
 st.title("📊 Centro de Comando Financiero")
