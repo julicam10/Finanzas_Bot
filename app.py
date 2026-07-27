@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 def ejecutar_sql(query, params=()):
-    conexion = sqlite3.connect("finance_bot.db")
+    conexion = psycopg2.connect(os.environ.get("DATABASE_URL"))
     cursor = conexion.cursor()
     cursor.execute(query, params)
     conexion.commit()
@@ -116,7 +116,7 @@ with pestana_trans:
                 conexion = psycopg2.connect(os.environ.get("DATABASE_URL"))
                 cursor = conexion.cursor()
                 
-                # OJO: En PostgreSQL usamos %s en lugar de ?
+                # OJO: En PostgreSQL usamos %s en lugar de %s
                 cursor.execute("DELETE FROM transacciones WHERE fecha LIKE %s", (f"{mes_actual}%",))
                 conexion.commit()
                 conexion.close()
@@ -241,7 +241,7 @@ with pestana_presupuestos:
         guardar_p = st.form_submit_button("Guardar Presupuesto")
         if guardar_p and cat_input:
             ejecutar_sql(
-                "INSERT INTO presupuestos (mes, categoria, tipo, limite) VALUES (?, ?, ?, ?)",
+                "INSERT INTO presupuestos (mes, categoria, tipo, limite) VALUES (%s, %s, %s, %s)",
                 (mes_input, cat_input.capitalize(), tipo_input, limite_input)
             )
             st.success(f"¡Presupuesto para {cat_input} guardado exitosamente!")
@@ -320,7 +320,7 @@ with pestana_deudas:
         guardar_d = st.form_submit_button("Guardar Deuda")
         if guardar_d and deuda_input:
             ejecutar_sql(
-                "INSERT INTO deudas (deuda, monto_inicial, monto_total, cuota_mes, estado) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO deudas (deuda, monto_inicial, monto_total, cuota_mes, estado) VALUES (%s, %s, %s, %s, %s)",
                 (deuda_input, monto_total_deuda, monto_total_deuda, cuota_mes_deuda, estado_deuda)
             )
             st.success(f"¡Deuda '{deuda_input}' registrada exitosamente!")
@@ -347,10 +347,10 @@ with pestana_deudas:
                     nuevo_monto = max(0, deuda_actual - monto_abono)
                     nuevo_estado = 'Completada' if nuevo_monto == 0 else 'Pendiente'
                     
-                    ejecutar_sql("UPDATE deudas SET monto_total = ?, estado = ? WHERE deuda = ?", (nuevo_monto, nuevo_estado, deuda_a_abonar))
+                    ejecutar_sql("UPDATE deudas SET monto_total = %s, estado = %s WHERE deuda = %s", (nuevo_monto, nuevo_estado, deuda_a_abonar))
                     
                     fecha_hoy = datetime.now().strftime("%Y-%m-%d")
-                    ejecutar_sql("INSERT INTO log_abonos (fecha, tipo, referencia, monto) VALUES (?, ?, ?, ?)",
+                    ejecutar_sql("INSERT INTO log_abonos (fecha, tipo, referencia, monto) VALUES (%s, %s, %s, %s)",
                                  (fecha_hoy, 'Deuda', deuda_a_abonar, monto_abono))
                     
                     st.success(f"¡Abono de $ {monto_abono:,.0f} aplicado a '{deuda_a_abonar}'!".replace(",", "."))
@@ -430,7 +430,7 @@ with pestana_metas:
         if guardar_m and nombre_meta:
             estado_inicial_meta = 'Completada' if monto_act >= monto_obj and monto_obj > 0 else 'En curso'
             ejecutar_sql(
-                "INSERT INTO metas_ahorro (nombre_meta, monto_objetivo, monto_actual, estrategia, estado) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO metas_ahorro (nombre_meta, monto_objetivo, monto_actual, estrategia, estado) VALUES (%s, %s, %s, %s, %s)",
                 (nombre_meta, monto_obj, monto_act, estrategia_meta, estado_inicial_meta)
             )
             st.success(f"¡Meta '{nombre_meta}' registrada con éxito!")
@@ -460,11 +460,11 @@ with pestana_metas:
                     nuevo_ahorro = ahorro_actual + monto_ahorro_nuevo
                     nuevo_estado_meta = 'Completada' if nuevo_ahorro >= monto_obj_val else 'En curso'
                     
-                    ejecutar_sql("UPDATE metas_ahorro SET monto_actual = ?, estado = ? WHERE nombre_meta = ?", 
+                    ejecutar_sql("UPDATE metas_ahorro SET monto_actual = %s, estado = %s WHERE nombre_meta = %s", 
                                  (nuevo_ahorro, nuevo_estado_meta, meta_a_abonar))
                     
                     fecha_hoy = datetime.now().strftime("%Y-%m-%d")
-                    ejecutar_sql("INSERT INTO log_abonos (fecha, tipo, referencia, monto) VALUES (?, ?, ?, ?)",
+                    ejecutar_sql("INSERT INTO log_abonos (fecha, tipo, referencia, monto) VALUES (%s, %s, %s, %s)",
                                  (fecha_hoy, 'Meta', meta_a_abonar, monto_ahorro_nuevo))
                     
                     st.success(f"¡Se sumaron $ {monto_ahorro_nuevo:,.0f} a la meta '{meta_a_abonar}'!".replace(",", "."))
@@ -572,7 +572,7 @@ with pestana_inversiones:
         if guardar_inv and activo_input:
             fecha_hoy = datetime.now().strftime("%Y-%m-%d")
             ejecutar_sql(
-                "INSERT INTO inversiones (fecha, activo, monto_invertido) VALUES (?, ?, ?)",
+                "INSERT INTO inversiones (fecha, activo, monto_invertido) VALUES (%s, %s, %s)",
                 (fecha_hoy, activo_input, monto_inv_input)
             )
             st.success(f"¡Inversión en '{activo_input}' registrada exitosamente!")
