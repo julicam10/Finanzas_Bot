@@ -1,4 +1,6 @@
-import sqlite3
+import os
+import psycopg2
+from sqlalchemy import create_engine
 import pandas as pd
 import streamlit as st
 import altair as alt
@@ -20,9 +22,10 @@ def ejecutar_sql(query, params=()):
     conexion.close()
 
 def cargar_datos(query):
-    conexion = sqlite3.connect("finance_bot.db")
-    df = pd.read_sql(query, conexion)
-    conexion.close()
+    # SQLAlchemy exige que la URL comience con postgresql://
+    url_db = os.environ.get("DATABASE_URL").replace("postgres://", "postgresql://")
+    engine = create_engine(url_db)
+    df = pd.read_sql(query, engine)
     return df
 
 st.title("📊 Centro de Comando Financiero")
@@ -109,16 +112,20 @@ with pestana_trans:
             )
             
             if st.button("💾 Guardar Cambios del Mes"):
-                conexion = sqlite3.connect("finance_bot.db")
+                # 1. Conexión manual para borrar registros antiguos del mes
+                conexion = psycopg2.connect(os.environ.get("DATABASE_URL"))
                 cursor = conexion.cursor()
                 
-                # Borramos SOLO los registros de este mes para proteger el historial
-                cursor.execute("DELETE FROM transacciones WHERE fecha LIKE ?", (f"{mes_actual}%",))
+                # OJO: En PostgreSQL usamos %s en lugar de ?
+                cursor.execute("DELETE FROM transacciones WHERE fecha LIKE %s", (f"{mes_actual}%",))
                 conexion.commit()
-                
-                # Insertamos la tabla editada
-                df_editado.to_sql("transacciones", conexion, if_exists="append", index=False)
                 conexion.close()
+                
+                # 2. Conexión con SQLAlchemy para insertar la tabla editada
+                url_db = os.environ.get("DATABASE_URL").replace("postgres://", "postgresql://")
+                engine = create_engine(url_db)
+                
+                df_editado.to_sql("transacciones", engine, if_exists="append", index=False)
                 
                 st.success("¡Transacciones del mes actualizadas con éxito!")
                 st.rerun()
@@ -260,15 +267,18 @@ with pestana_presupuestos:
         
         # Botón para guardar los cambios
         if st.button("💾 Guardar Cambios en Presupuestos"):
-            conexion = sqlite3.connect("finance_bot.db")
+            # Para borrar los datos antiguos
+            conexion = psycopg2.connect(os.environ.get("DATABASE_URL"))
             cursor = conexion.cursor()
-            
-            cursor.execute("DELETE FROM presupuestos")
+            cursor.execute("DELETE FROM presupuestos") # (o transacciones)
             conexion.commit()
-            
-            df_pres_editado.to_sql("presupuestos", conexion, if_exists="append", index=False)
             conexion.close()
-            
+
+            # Para guardar la tabla editada
+            url_db = os.environ.get("DATABASE_URL").replace("postgres://", "postgresql://")
+            engine = create_engine(url_db)
+            df_pres_editado.to_sql("presupuestos", engine, if_exists="append", index=False)
+
             st.success("¡Presupuestos actualizados con éxito!")
             st.rerun()
             

@@ -1,4 +1,6 @@
-import sqlite3
+import os
+import psycopg2
+from sqlalchemy import create_engine
 import os
 import unicodedata
 from datetime import datetime
@@ -8,14 +10,14 @@ from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filte
 TOKEN = "7770957118:AAHQTQ4PLdrJ1YRH3Z_U-9T1IB_3KXstLI0"
 
 def ejecutar_sql(query, params=()):
-    conexion = sqlite3.connect("finance_bot.db")
+    conexion = psycopg2.connect(os.environ.get("DATABASE_URL"))
     cursor = conexion.cursor()
     cursor.execute(query, params)
     conexion.commit()
     conexion.close()
 
 def consultar_sql(query, params=()):
-    conexion = sqlite3.connect("finance_bot.db")
+    conexion = psycopg2.connect(os.environ.get("DATABASE_URL"))
     cursor = conexion.cursor()
     cursor.execute(query, params)
     resultados = cursor.fetchall()
@@ -101,10 +103,10 @@ async def manejar_mensaje(update: Update, context: ContextTypes.DEFAULT_TYPE):
             nuevo_monto = max(0, saldo_actual - monto)
             nuevo_estado = 'Completada' if nuevo_monto == 0 else 'Pendiente'
 
-            ejecutar_sql("UPDATE deudas SET monto_total = ?, estado = ? WHERE deuda = ?", (nuevo_monto, nuevo_estado, deuda_encontrada))
+            ejecutar_sql("UPDATE deudas SET monto_total = %s, estado = %s WHERE deuda = %s", (nuevo_monto, nuevo_estado, deuda_encontrada))
             
             # Registrar en log_abonos (la tabla unificada con la web)
-            ejecutar_sql("INSERT INTO log_abonos (fecha, tipo, referencia, monto) VALUES (?, ?, ?, ?)",
+            ejecutar_sql("INSERT INTO log_abonos (fecha, tipo, referencia, monto) VALUES (%s, %s, %s, %s)",
                          (fecha_hoy, 'Deuda', deuda_encontrada, monto))
 
             await update.message.reply_text(
@@ -149,11 +151,11 @@ async def manejar_mensaje(update: Update, context: ContextTypes.DEFAULT_TYPE):
             nuevo_ahorro = ahorro_actual + monto
             nuevo_estado_meta = 'Completada' if nuevo_ahorro >= monto_obj else 'En curso'
 
-            ejecutar_sql("UPDATE metas_ahorro SET monto_actual = ?, estado = ? WHERE nombre_meta = ?",
+            ejecutar_sql("UPDATE metas_ahorro SET monto_actual = %s, estado = %s WHERE nombre_meta = %s",
                          (nuevo_ahorro, nuevo_estado_meta, meta_encontrada))
 
             # Registrar en log_abonos (la tabla unificada con la web)
-            ejecutar_sql("INSERT INTO log_abonos (fecha, tipo, referencia, monto) VALUES (?, ?, ?, ?)",
+            ejecutar_sql("INSERT INTO log_abonos (fecha, tipo, referencia, monto) VALUES (%s, %s, %s, %s)",
                          (fecha_hoy, 'Meta', meta_encontrada, monto))
 
             await update.message.reply_text(
@@ -184,7 +186,7 @@ async def manejar_mensaje(update: Update, context: ContextTypes.DEFAULT_TYPE):
         categoria = clasificar_gasto(concepto)
 
         ejecutar_sql(
-            "INSERT INTO transacciones (fecha, concepto, categoria, monto, metodo_pago) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO transacciones (fecha, concepto, categoria, monto, metodo_pago) VALUES (%s, %s, %s, %s, %s)",
             (fecha_hoy, concepto, categoria, monto, metodo_pago)
         )
 
