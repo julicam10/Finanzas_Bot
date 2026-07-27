@@ -5,4 +5,4 @@ python-telegram-bot
 flask
 requests
 psycopg2-binary==2.9.9
-SQLAlchemy==2.0.25
+SQLAlchemy==2.0.36
