@@ -41,7 +41,7 @@ def clasificar_gasto(concepto):
         return "Mercado"
     elif any(w in c_lower for w in ["hamburguesa", "pizza", "papas king", "comida fuera"]):
         return "Comida fuera"
-    elif any(w in c_lower for w in ["barberia", "gimnasio"]):
+    elif any(w in c_lower for w in ["barberia", "gimnasio", "uñas"]):
         return "Bienestar y Cuidado"
     elif any(w in c_lower for w in ["comida alma", "arena alma"]):
         return "Mascota (Alma)"
