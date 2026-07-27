@@ -164,7 +164,26 @@ with pestana_historial:
         st.info("No hay historial disponible todavía.")
 
 with pestana_presupuestos:
-    st.subheader("Gestión de Presupuestos (Enfoque 50/30/20)")
+    st.subheader("Gestión de Presupuestos")
+
+    # --- NUEVO: Guía de categorías desplegable ---
+    with st.expander("💡 Ver categorías del bot y palabras clave (Haz clic para desplegar)"):
+        st.markdown("""
+        **Usa los nombres principales (en negrita) al crear tu presupuesto.** El bot clasificará automáticamente los gastos si usas las palabras clave asociadas:
+        
+        * **Inversión**: s&p500, tsmc
+        * **Ahorro**: fondeloitte, ahorro personal, ahorro ropa, ahorro viajes
+        * **Casa / Obligaciones**: arriendo
+        * **Mercado**: huevo, proteina, carne, d1, ara, éxito, exito, fruta, verdura
+        * **Comida fuera**: hamburguesa, pizza, papas king, comida fuera
+        * **Bienestar y Cuidado**: barberia, gimnasio
+        * **Mascota (Alma)**: comida alma, arena alma
+        * **Suscripciones**: netflix, youtube, google fotos
+        * **Servicios**: paquete de datos, datos
+        * **Pago deudas**: crédito hipotecario, credito hipotecario, pago ipad, t.c nu, t.c bancolombia
+        * **Gastos del mes**: salida con amigos, transporte, pasaje, cine, salida *(Esta es también la categoría por defecto)*
+        """)
+    # ---------------------------------------------
     
     col_sal1, col_sal2, col_sal3 = st.columns(3)
     with col_sal1:
