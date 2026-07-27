@@ -1,6 +1,6 @@
 import os
 import psycopg2
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 import pandas as pd
 import streamlit as st
 import altair as alt
@@ -22,13 +22,19 @@ def ejecutar_sql(query, params=()):
     conexion.close()
 
 def cargar_datos(query):
-    # Aseguramos el formato correcto para SQLAlchemy
-    url_db = os.environ.get("DATABASE_URL").replace("postgres://", "postgresql://")
-    
-    # Le pasamos la URL directamente a Pandas (él gestiona el engine por debajo)
-    df = pd.read_sql(query, url_db)
-    
-    return df
+    try:
+        url_db = os.environ.get("DATABASE_URL").replace("postgres://", "postgresql://")
+        engine = create_engine(url_db)
+        
+        # Conexión formal y envoltorio text() requeridos por SQLAlchemy 2.0+
+        with engine.connect() as conexion:
+            df = pd.read_sql(text(query), conexion)
+            
+        return df
+    except Exception as e:
+        # Trazabilidad: ahora si falla, lo veremos claramente en el log de Render
+        print(f"🚨 ERROR FATAL AL CARGAR DATOS ({query}): {e}")
+        return pd.DataFrame()
 
 st.title("📊 Centro de Comando Financiero")
 st.markdown("Monitoreo en vivo de tus transacciones, presupuestos, deudas y metas de ahorro.")
