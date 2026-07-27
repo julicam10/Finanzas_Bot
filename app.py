@@ -240,7 +240,7 @@ with pestana_presupuestos:
             st.success(f"¡Presupuesto para {cat_input} guardado exitosamente!")
             st.rerun()
 
-st.markdown("---")
+    st.markdown("---")
     st.subheader("📋 Editar Tus Presupuestos Registrados")
     
     if not df_presupuestos.empty:
