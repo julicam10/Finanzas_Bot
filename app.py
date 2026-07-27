@@ -22,10 +22,12 @@ def ejecutar_sql(query, params=()):
     conexion.close()
 
 def cargar_datos(query):
-    # SQLAlchemy exige que la URL comience con postgresql://
+    # Aseguramos el formato correcto para SQLAlchemy
     url_db = os.environ.get("DATABASE_URL").replace("postgres://", "postgresql://")
-    engine = create_engine(url_db)
-    df = pd.read_sql(query, engine)
+    
+    # Le pasamos la URL directamente a Pandas (él gestiona el engine por debajo)
+    df = pd.read_sql(query, url_db)
+    
     return df
 
 st.title("📊 Centro de Comando Financiero")
