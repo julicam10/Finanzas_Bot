@@ -220,7 +220,7 @@ with pestana_presupuestos:
     
     col_sal1, col_sal2, col_sal3 = st.columns(3)
     with col_sal1:
-        salario_mes = st.number_input("Ingreso / Salario del Mes (COP)", min_value=0, value=5000000, step=100000, format="%d")
+        salario_mes = st.number_input("Ingreso / Salario del Mes (COP)", min_value=0, value=6427740, step=100000, format="%d")
     
     total_presupuestado = df_presupuestos['limite'].sum() if not df_presupuestos.empty else 0
     disponible_por_asignar = salario_mes - total_presupuestado
