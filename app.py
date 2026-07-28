@@ -510,43 +510,85 @@ with pestana_metas:
             ).properties(height=350)
             st.altair_chart(grafico_metas, use_container_width=True)
 
-            st.markdown("### Detalle de Metas y Restante por Ahorrar")
+            st.markdown("### 🎯 Detalle y Edición de Metas de Ahorro")
+            
+            # 1. Preparamos el DataFrame con los cálculos, pero manteniendo los números puros (sin el símbolo $) 
+            # para que Streamlit permita editarlos matemáticamente
             df_metas_mostrar = df_metas_filtradas.copy()
-            # Calcular el restante para cumplir la meta
-            df_metas_mostrar['Restante por Ahorrar'] = df_metas_mostrar['monto_objetivo'] - df_metas_mostrar['monto_actual']
-            df_metas_mostrar['Restante por Ahorrar'] = df_metas_mostrar['Restante por Ahorrar'].apply(lambda x: max(0, x))
+            df_metas_mostrar['Restante (COP)'] = df_metas_mostrar['monto_objetivo'] - df_metas_mostrar['monto_actual']
+            df_metas_mostrar['Restante (COP)'] = df_metas_mostrar['Restante (COP)'].apply(lambda x: max(0, x))
+            df_metas_mostrar['Progreso (%)'] = (df_metas_mostrar['monto_actual'] / df_metas_mostrar['monto_objetivo']) * 100
             
-            df_metas_mostrar['Progreso'] = (df_metas_mostrar['monto_actual'] / df_metas_mostrar['monto_objetivo']) * 100
-            df_metas_mostrar['Progreso_Str'] = df_metas_mostrar['Progreso'].apply(lambda x: f"{x:.2f}%")
-            
-            df_metas_mostrar = df_metas_mostrar.rename(columns={
-                'id': 'ID', 'nombre_meta': 'Meta', 'monto_objetivo': 'Objetivo',
-                'monto_actual': 'Ahorrado Actual', 'Restante por Ahorrar': 'Restante por Ahorrar', 
-                'estrategia': 'Estrategia', 'Progreso_Str': '% Progreso', 'estado': 'Estado'
-            })
-            
-            df_metas_mostrar['Objetivo'] = df_metas_mostrar['Objetivo'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-            df_metas_mostrar['Ahorrado Actual'] = df_metas_mostrar['Ahorrado Actual'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-            df_metas_mostrar['Restante por Ahorrar'] = df_metas_mostrar['Restante por Ahorrar'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-            
-            st.dataframe(df_metas_mostrar, use_container_width=True)
+            # 2. Renderizamos el editor interactivo
+            # Bloqueamos el ID y las columnas calculadas para proteger la base de datos
+            df_metas_editado = st.data_editor(
+                df_metas_mostrar, 
+                disabled=["id", "Restante (COP)", "Progreso (%)"], 
+                key="editor_metas",
+                use_container_width=True
+            )
 
-            # Log de Abonos específico para Metas
+            # 3. Botón para guardar las metas
+            if st.button("Guardar Cambios en Metas"):
+                for index, fila in df_metas_editado.iterrows():
+                    query = """
+                        UPDATE metas_ahorro 
+                        SET nombre_meta = %s, monto_objetivo = %s, monto_actual = %s, estrategia = %s, estado = %s 
+                        WHERE id = %s
+                    """
+                    params = (
+                        fila['nombre_meta'], 
+                        float(fila['monto_objetivo']), 
+                        float(fila['monto_actual']), 
+                        fila['estrategia'], 
+                        fila['estado'], 
+                        fila['id']
+                    )
+                    ejecutar_sql(query, params)
+                st.success("¡Metas actualizadas correctamente en la base de datos!")
+                st.rerun()
+
+            # --- Log de Abonos específico para Metas ---
             st.markdown("---")
-            st.subheader("📜 Historial de Ahorros a Metas")
+            st.markdown("### 📜 Historial de Ahorros a Metas (Editable)")
+            
             try:
+                # Traemos los datos puros de la base de datos
                 df_log_metas = cargar_datos("SELECT * FROM log_abonos WHERE tipo = 'Meta' ORDER BY id DESC")
             except:
                 df_log_metas = pd.DataFrame()
 
             if not df_log_metas.empty:
-                df_lm_mostrar = df_log_metas.rename(columns={
-                    'id': 'ID', 'fecha': 'Fecha', 'referencia': 'Meta', 'monto': 'Monto Abonado'
-                })[['Fecha', 'Meta', 'Monto Abonado']]
-                df_lm_mostrar['Monto Abonado'] = df_lm_mostrar['Monto Abonado'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-                st.dataframe(df_lm_mostrar, use_container_width=True)
+                # 4. Renderizamos el editor del historial
+                # Bloqueamos 'id' y 'tipo' porque el tipo siempre debe ser 'Meta' aquí
+                df_log_editado = st.data_editor(
+                    df_log_metas, 
+                    disabled=["id", "tipo"], 
+                    key="editor_log_metas",
+                    use_container_width=True
+                )
+
+                # 5. Botón para guardar el historial
+                if st.button("Guardar Cambios en Historial"):
+                    for index, fila in df_log_editado.iterrows():
+                        query = """
+                            UPDATE log_abonos 
+                            SET fecha = %s, referencia = %s, monto = %s 
+                            WHERE id = %s
+                        """
+                        params = (
+                            fila['fecha'], 
+                            fila['referencia'], 
+                            float(fila['monto']), 
+                            fila['id']
+                        )
+                        ejecutar_sql(query, params)
+                        
+                    st.success("¡Historial actualizado correctamente!")
+                    st.rerun()
             else:
                 st.info("Aún no hay abonos registrados para metas.")
+                
         else:
             st.info("No hay metas de ahorro en curso en este momento.")
     else:
