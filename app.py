@@ -380,13 +380,21 @@ with pestana_deudas:
                 'monto_inicial': 'Deuda Inicial', 'monto_total': 'Saldo Pendiente'
             })
             
+            # 1. Definimos la escala de colores explícita
+            escala_colores_deudas = alt.Scale(
+                domain=['Deuda Inicial', 'Saldo Pendiente'], 
+                range=['#CD040E', '#FC5F67'] 
+            )
+
+            # 2. Inyectamos alt.Color con la escala dentro del encode
             grafico_deudas = alt.Chart(df_deudas_melted).mark_bar().encode(
                 x=alt.X('deuda:N', title='Deuda'),
                 y=alt.Y('Monto:Q', axis=alt.Axis(format=',.0f', title='COP')),
-                color='Concepto:N',
+                color=alt.Color('Concepto:N', scale=escala_colores_deudas),
                 xOffset='Concepto:N',
                 tooltip=['deuda', 'Concepto', alt.Tooltip('Monto:Q', format=',.0f')]
             ).properties(height=350)
+            
             st.altair_chart(grafico_deudas, use_container_width=True)
 
             st.markdown("### Detalle de Deudas y Restante")
