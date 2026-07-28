@@ -399,24 +399,46 @@ with pestana_deudas:
 
             st.markdown("### 💳 Detalle y Edición de Deudas")
             
-            # 1. Preparamos el DataFrame con los cálculos, manteniendo los números puros
+            # 1. Consultar la "Fuente de Verdad": El historial real de abonos
+            try:
+                df_log_deudas_calc = cargar_datos("SELECT * FROM log_abonos WHERE tipo = 'Deuda'")
+                if not df_log_deudas_calc.empty:
+                    abonos_agrupados = df_log_deudas_calc.groupby('referencia')['monto'].sum().reset_index()
+                    abonos_agrupados.rename(columns={'referencia': 'deuda', 'monto': 'Abonado Acumulado (COP)'}, inplace=True)
+                else:
+                    abonos_agrupados = pd.DataFrame(columns=['deuda', 'Abonado Acumulado (COP)'])
+            except:
+                abonos_agrupados = pd.DataFrame(columns=['deuda', 'Abonado Acumulado (COP)'])
+
+            # 2. Unir los abonos reales con el DataFrame de deudas
             df_deudas_mostrar = df_deudas_filtradas.copy()
-            # Asumiendo que 'monto_inicial' es la deuda original y 'monto_total' es el restante
-            df_deudas_mostrar['Abonado Acumulado (COP)'] = df_deudas_mostrar['monto_inicial'] - df_deudas_mostrar['monto_total']
-            df_deudas_mostrar['Abonado Acumulado (COP)'] = df_deudas_mostrar['Abonado Acumulado (COP)'].apply(lambda x: max(0, x))
+            df_deudas_mostrar = pd.merge(df_deudas_mostrar, abonos_agrupados, on='deuda', how='left')
+            df_deudas_mostrar['Abonado Acumulado (COP)'] = df_deudas_mostrar['Abonado Acumulado (COP)'].fillna(0)
             
-            # 2. Renderizamos el editor interactivo
-            # Bloqueamos el ID y el cálculo de 'Abonado Acumulado'
+            # 3. Recalcular el monto_total (saldo pendiente) estrictamente basado en la realidad
+            df_deudas_mostrar['monto_total'] = df_deudas_mostrar['monto_inicial'] - df_deudas_mostrar['Abonado Acumulado (COP)']
+            df_deudas_mostrar['monto_total'] = df_deudas_mostrar['monto_total'].apply(lambda x: max(0, x))
+
+            # 4. Renderizar el editor interactivo
+            # Bloqueamos el ID, el Saldo Pendiente y el Abonado. 
+            # El usuario edita el Inicial; el sistema recalcula el resto.
             df_deudas_editado = st.data_editor(
                 df_deudas_mostrar, 
-                disabled=["id", "Abonado Acumulado (COP)"], 
+                disabled=["id", "monto_total", "Abonado Acumulado (COP)"], 
                 key="editor_deudas",
                 use_container_width=True
             )
 
-            # 3. Botón para guardar las deudas
+            # 5. Botón para guardar y consolidar la lógica en PostgreSQL
             if st.button("Guardar Cambios en Deudas"):
                 for index, fila in df_deudas_editado.iterrows():
+                    # Antes de guardar, aseguramos que el saldo pendiente sea matemáticamente perfecto
+                    nuevo_monto_total = float(fila['monto_inicial']) - float(fila['Abonado Acumulado (COP)'])
+                    nuevo_monto_total = max(0, nuevo_monto_total)
+                    
+                    # Auto-completar la deuda si el saldo llega a cero
+                    nuevo_estado = 'Completada' if nuevo_monto_total <= 0 else fila['estado']
+
                     query = """
                         UPDATE deudas 
                         SET deuda = %s, monto_inicial = %s, monto_total = %s, cuota_mes = %s, estado = %s 
@@ -425,53 +447,15 @@ with pestana_deudas:
                     params = (
                         fila['deuda'], 
                         float(fila['monto_inicial']), 
-                        float(fila['monto_total']), 
+                        nuevo_monto_total, 
                         float(fila['cuota_mes']),
-                        fila['estado'], 
+                        nuevo_estado, 
                         fila['id']
                     )
                     ejecutar_sql(query, params)
-                st.success("¡Deudas actualizadas correctamente en la base de datos!")
+                    
+                st.success("¡Deudas actualizadas! Los saldos pendientes se recalcularon automáticamente.")
                 st.rerun()
-
-            # --- Log de Abonos específico para Deudas ---
-            st.markdown("---")
-            st.markdown("### 📜 Historial de Abonos a Deudas (Editable)")
-            
-            try:
-                # Traemos los datos puros de la base de datos
-                df_log_deudas = cargar_datos("SELECT * FROM log_abonos WHERE tipo = 'Deuda' ORDER BY id DESC")
-            except:
-                df_log_deudas = pd.DataFrame()
-
-            if not df_log_deudas.empty:
-                # 4. Renderizamos el editor del historial
-                # Bloqueamos 'id' y 'tipo' porque el tipo siempre debe ser 'Deuda'
-                df_log_deudas_editado = st.data_editor(
-                    df_log_deudas, 
-                    disabled=["id", "tipo"], 
-                    key="editor_log_deudas",
-                    use_container_width=True
-                )
-
-                # 5. Botón para guardar el historial
-                if st.button("Guardar Cambios en Historial de Deudas"):
-                    for index, fila in df_log_deudas_editado.iterrows():
-                        query = """
-                            UPDATE log_abonos 
-                            SET fecha = %s, referencia = %s, monto = %s 
-                            WHERE id = %s
-                        """
-                        params = (
-                            fila['fecha'], 
-                            fila['referencia'], 
-                            float(fila['monto']), 
-                            fila['id']
-                        )
-                        ejecutar_sql(query, params)
-                        
-                    st.success("¡Historial de deudas actualizado correctamente!")
-                    st.rerun()
             else:
                 st.info("Aún no hay abonos registrados para deudas.")
         else:
