@@ -708,13 +708,39 @@ with pestana_inversiones:
         st.subheader("📊 Distribución de tu Portafolio de Inversión")
         
         col_g1, col_g2 = st.columns(2)
+
         with col_g1:
+            st.markdown("**📝 Editar Portafolio**")
+            # Usamos el DataFrame crudo sin el símbolo $ para permitir cálculos
             df_inv_mostrar = df_inversiones.copy()
-            df_inv_mostrar['monto_invertido'] = df_inv_mostrar['monto_invertido'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-            df_inv_mostrar = df_inv_mostrar.rename(columns={
-                'id': 'ID', 'fecha': 'Fecha Registro', 'activo': 'Activo', 'monto_invertido': 'Monto Invertido (COP)'
-            })
-            st.dataframe(df_inv_mostrar, use_container_width=True)
+            
+            # Renderizamos el editor interactivo bloqueando solo el ID
+            df_inversiones_editado = st.data_editor(
+                df_inv_mostrar, 
+                disabled=["id"], 
+                key="editor_inversiones",
+                use_container_width=True
+            )
+
+        # Botón para guardar los cambios
+        if st.button("Guardar Cambios en Portafolio"):
+            for index, fila in df_inversiones_editado.iterrows():
+                query = """
+                    UPDATE inversiones 
+                    SET fecha = %s, activo = %s, monto_invertido = %s 
+                    WHERE id = %s
+                """
+                # Aseguramos que el monto se vaya como float a la base de datos
+                params = (
+                    fila['fecha'], 
+                    fila['activo'], 
+                    float(fila['monto_invertido']), 
+                    fila['id']
+                )
+                ejecutar_sql(query, params)
+                
+            st.success("¡Portafolio actualizado con éxito!")
+            st.rerun()
             
         with col_g2:
             grafico_inversiones = alt.Chart(df_inversiones).mark_arc(innerRadius=50).encode(
