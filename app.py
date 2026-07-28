@@ -302,11 +302,19 @@ with pestana_presupuestos:
             df_tipo_mostrar.columns = ['Tipo', 'Límite (COP)', '% del Total']
             st.dataframe(df_tipo_mostrar, use_container_width=True)
         with col_t2:
+            # 1. Definimos la escala de colores explícita
+            escala_colores = alt.Scale(
+                domain=['Inversión', 'Necesidad', 'Gasto General', 'Ahorro'], 
+                range=['#2AA63E', '#E1712B', '#E7180B','#155DFC']
+            )
+
+            # 2. Inyectamos la escala en el parámetro color
             grafico_tipo = alt.Chart(df_tipo_resumen).mark_arc(innerRadius=50).encode(
                 theta=alt.Theta(field="limite", type="quantitative"),
-                color=alt.Color(field="tipo", type="nominal"),
+                color=alt.Color(field="tipo", type="nominal", scale=escala_colores),
                 tooltip=['tipo', alt.Tooltip('limite:Q', format=',.0f'), alt.Tooltip('Porcentaje:Q', format='.2f')]
             ).properties(height=250)
+            
             st.altair_chart(grafico_tipo, use_container_width=True)
     else:
         st.info("No hay presupuestos configurados todavía.")
