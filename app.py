@@ -710,28 +710,48 @@ with pestana_inversiones:
         col_g1, col_g2 = st.columns(2)
 
         with col_g1:
-            st.markdown("**📝 Editar Portafolio**")
-            # Usamos el DataFrame crudo sin el símbolo $ para permitir cálculos
+            # 1. TABLA VISUAL DE LECTURA (Con formato COP impecable)
             df_inv_mostrar = df_inversiones.copy()
-            
-            # Renderizamos el editor interactivo con configuración visual de columnas
-            df_inversiones_editado = st.data_editor(
-                df_inv_mostrar, 
-                disabled=["id"], 
-                key="editor_inversiones",
-                use_container_width=True,
-                column_config={
-                    "id": "ID",
-                    "fecha": "Fecha Registro",
-                    "activo": "Activo",
-                    "monto_invertido": st.column_config.NumberColumn(
-                        "Monto Invertido (COP)",
-                        help="Monto total invertido",
-                        format="$ %d",  # Máscara visual de moneda
-                        step=1
-                    )
-                }
-            )
+            df_inv_mostrar['monto_invertido'] = df_inv_mostrar['monto_invertido'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+            df_inv_mostrar = df_inv_mostrar.rename(columns={
+                'id': 'ID', 'fecha': 'Fecha Registro', 'activo': 'Activo', 'monto_invertido': 'Monto Invertido (COP)'
+            })
+            st.dataframe(df_inv_mostrar, use_container_width=True)
+
+            # 2. PANEL DESPLEGABLE DE EDICIÓN
+            with st.expander("✏️ Editar o Eliminar un Activo Existente"):
+                activos_lista = df_inversiones['activo'].tolist()
+                activo_sel = st.selectbox("Selecciona el activo a modificar:", activos_lista)
+                
+                if activo_sel:
+                    # Traemos los datos crudos actuales del activo seleccionado
+                    fila_sel = df_inversiones[df_inversiones['activo'] == activo_sel].iloc[0]
+                    
+                    col_ed1, col_ed2 = st.columns(2)
+                    with col_ed1:
+                        nuevo_nombre_activo = st.text_input("Nombre del Activo", value=fila_sel['activo'])
+                    with col_ed2:
+                        nuevo_monto_activo = st.number_input(
+                            "Monto Invertido (COP)", 
+                            value=int(fila_sel['monto_invertido']), 
+                            step=50000, 
+                            format="%d"
+                        )
+                    
+                    col_b1, col_b2 = st.columns(2)
+                    with col_b1:
+                        if st.button("Guardar Cambios"):
+                            query = "UPDATE inversiones SET activo = %s, monto_invertido = %s WHERE id = %s"
+                            ejecutar_sql(query, (nuevo_nombre_activo, float(nuevo_monto_activo), int(fila_sel['id'])))
+                            st.success("¡Activo actualizado!")
+                            st.rerun()
+                            
+                    with col_b2:
+                        if st.button("Eliminar Activo"):
+                            query = "DELETE FROM inversiones WHERE id = %s"
+                            ejecutar_sql(query, (int(fila_sel['id']),))
+                            st.warning("¡Activo eliminado!")
+                            st.rerun()
 
         # Botón para guardar los cambios
         if st.button("Guardar Cambios en Portafolio"):
