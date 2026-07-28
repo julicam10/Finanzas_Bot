@@ -362,7 +362,7 @@ with pestana_deudas:
                     nuevo_monto = max(0, deuda_actual - monto_abono)
                     nuevo_estado = 'Completada' if nuevo_monto == 0 else 'Pendiente'
                     
-                    ejecutar_sql("UPDATE deudas SET monto_total = %s, estado = %s WHERE deuda = %s", (nuevo_monto, nuevo_estado, deuda_a_abonar))
+                    ejecutar_sql("UPDATE deudas SET monto_total = %s, estado = %s WHERE deuda = %s", (float(nuevo_monto), nuevo_estado, deuda_a_abonar))
                     
                     fecha_hoy = datetime.now().strftime("%Y-%m-%d")
                     ejecutar_sql("INSERT INTO log_abonos (fecha, tipo, referencia, monto) VALUES (%s, %s, %s, %s)",
@@ -476,7 +476,7 @@ with pestana_metas:
                     nuevo_estado_meta = 'Completada' if nuevo_ahorro >= monto_obj_val else 'En curso'
                     
                     ejecutar_sql("UPDATE metas_ahorro SET monto_actual = %s, estado = %s WHERE nombre_meta = %s", 
-                                 (nuevo_ahorro, nuevo_estado_meta, meta_a_abonar))
+                                 (float(nuevo_ahorro), nuevo_estado_meta, meta_a_abonar))
                     
                     fecha_hoy = datetime.now().strftime("%Y-%m-%d")
                     ejecutar_sql("INSERT INTO log_abonos (fecha, tipo, referencia, monto) VALUES (%s, %s, %s, %s)",
