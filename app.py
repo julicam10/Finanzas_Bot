@@ -399,8 +399,9 @@ with pestana_deudas:
 
             st.markdown("### 💳 Detalle y Edición de Deudas")
             
-            # 1. Consultar la "Fuente de Verdad": El historial real de abonos
+            # --- 1. PREPARACIÓN DE DATOS DE DEUDAS ---
             try:
+                # Obtenemos los abonos para calcular lo pagado realmente
                 df_log_deudas_calc = cargar_datos("SELECT * FROM log_abonos WHERE tipo = 'Deuda'")
                 if not df_log_deudas_calc.empty:
                     abonos_agrupados = df_log_deudas_calc.groupby('referencia')['monto'].sum().reset_index()
@@ -410,27 +411,58 @@ with pestana_deudas:
             except:
                 abonos_agrupados = pd.DataFrame(columns=['deuda', 'Abonado Acumulado (COP)'])
 
-            # 2. Unir los abonos reales con el DataFrame de deudas
+            # Unimos la información
             df_deudas_mostrar = df_deudas_filtradas.copy()
-            df_deudas_mostrar = pd.merge(df_deudas_mostrar, abonos_agrupados, on='deuda', how='left')
-            df_deudas_mostrar['Abonado Acumulado (COP)'] = df_deudas_mostrar['Abonado Acumulado (COP)'].fillna(0)
-            
-            # 3. Recalcular el monto_total (saldo pendiente) estrictamente basado en la realidad
-            df_deudas_mostrar['monto_total'] = df_deudas_mostrar['monto_inicial'] - df_deudas_mostrar['Abonado Acumulado (COP)']
-            df_deudas_mostrar['monto_total'] = df_deudas_mostrar['monto_total'].apply(lambda x: max(0, x))
+            if not df_deudas_mostrar.empty:
+                df_deudas_mostrar = pd.merge(df_deudas_mostrar, abonos_agrupados, on='deuda', how='left')
+                df_deudas_mostrar['Abonado Acumulado (COP)'] = df_deudas_mostrar['Abonado Acumulado (COP)'].fillna(0)
+                
+                # Recalculamos el saldo pendiente de forma segura
+                df_deudas_mostrar['monto_total'] = df_deudas_mostrar['monto_inicial'] - df_deudas_mostrar['Abonado Acumulado (COP)']
+                df_deudas_mostrar['monto_total'] = df_deudas_mostrar['monto_total'].apply(lambda x: max(0, x))
 
-            # --- Log de Abonos específico para Deudas ---
+                # --- 2. RENDERIZADO DE LA TABLA SUPERIOR (DEUDAS) ---
+                df_deudas_editado = st.data_editor(
+                    df_deudas_mostrar, 
+                    disabled=["id", "monto_total", "Abonado Acumulado (COP)"], 
+                    key="editor_deudas",
+                    use_container_width=True
+                )
+
+                if st.button("Guardar Cambios en Deudas"):
+                    for index, fila in df_deudas_editado.iterrows():
+                        nuevo_monto_total = float(fila['monto_inicial']) - float(fila['Abonado Acumulado (COP)'])
+                        nuevo_monto_total = max(0, nuevo_monto_total)
+                        nuevo_estado = 'Completada' if nuevo_monto_total <= 0 else fila['estado']
+
+                        query = """
+                            UPDATE deudas 
+                            SET deuda = %s, monto_inicial = %s, monto_total = %s, cuota_mes = %s, estado = %s 
+                            WHERE id = %s
+                        """
+                        params = (
+                            fila['deuda'], 
+                            float(fila['monto_inicial']), 
+                            nuevo_monto_total, 
+                            float(fila['cuota_mes']),
+                            nuevo_estado, 
+                            fila['id']
+                        )
+                        ejecutar_sql(query, params)
+                        
+                    st.success("¡Deudas actualizadas!")
+                    st.rerun()
+            else:
+                st.info("No hay deudas para mostrar en este momento.")
+
+            # --- 3. RENDERIZADO DE LA TABLA INFERIOR (HISTORIAL) ---
             st.markdown("---")
             st.markdown("### 📜 Historial de Abonos a Deudas (Editable)")
             
-            # OPTIMIZACIÓN: Verificamos si la variable de arriba existe y tiene datos
-            # Esto evita hacer un doble llamado a la base de datos que causa el bloqueo
+            # Reutilizamos los datos en memoria para no saturar la base de datos
             if 'df_log_deudas_calc' in locals() and not df_log_deudas_calc.empty:
-                
-                # Ordenamos los datos en memoria para que los más recientes salgan primero
                 df_log_deudas_ordenado = df_log_deudas_calc.sort_values(by='id', ascending=False)
                 
-                # 4. Renderizamos el editor del historial usando los datos en memoria
                 df_log_deudas_editado = st.data_editor(
                     df_log_deudas_ordenado, 
                     disabled=["id", "tipo"], 
@@ -438,7 +470,6 @@ with pestana_deudas:
                     use_container_width=True
                 )
 
-                # 5. Botón para guardar el historial
                 if st.button("Guardar Cambios en Historial de Deudas"):
                     for index, fila in df_log_deudas_editado.iterrows():
                         query = """
