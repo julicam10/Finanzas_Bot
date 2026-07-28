@@ -714,12 +714,23 @@ with pestana_inversiones:
             # Usamos el DataFrame crudo sin el símbolo $ para permitir cálculos
             df_inv_mostrar = df_inversiones.copy()
             
-            # Renderizamos el editor interactivo bloqueando solo el ID
+            # Renderizamos el editor interactivo con configuración visual de columnas
             df_inversiones_editado = st.data_editor(
                 df_inv_mostrar, 
                 disabled=["id"], 
                 key="editor_inversiones",
-                use_container_width=True
+                use_container_width=True,
+                column_config={
+                    "id": "ID",
+                    "fecha": "Fecha Registro",
+                    "activo": "Activo",
+                    "monto_invertido": st.column_config.NumberColumn(
+                        "Monto Invertido (COP)",
+                        help="Monto total invertido",
+                        format="$ %d",  # Máscara visual de moneda
+                        step=1
+                    )
+                }
             )
 
         # Botón para guardar los cambios
