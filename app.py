@@ -397,38 +397,81 @@ with pestana_deudas:
             
             st.altair_chart(grafico_deudas, use_container_width=True)
 
-            st.markdown("### Detalle de Deudas y Restante")
+            st.markdown("### 💳 Detalle y Edición de Deudas")
+            
+            # 1. Preparamos el DataFrame con los cálculos, manteniendo los números puros
             df_deudas_mostrar = df_deudas_filtradas.copy()
-            # Calcular lo ya abonado como la diferencia entre inicial y total actual
-            df_deudas_mostrar['Abonado Acumulado'] = df_deudas_mostrar['monto_inicial'] - df_deudas_mostrar['monto_total']
+            # Asumiendo que 'monto_inicial' es la deuda original y 'monto_total' es el restante
+            df_deudas_mostrar['Abonado Acumulado (COP)'] = df_deudas_mostrar['monto_inicial'] - df_deudas_mostrar['monto_total']
+            df_deudas_mostrar['Abonado Acumulado (COP)'] = df_deudas_mostrar['Abonado Acumulado (COP)'].apply(lambda x: max(0, x))
             
-            df_deudas_mostrar = df_deudas_mostrar.rename(columns={
-                'id': 'ID', 'deuda': 'Deuda', 'monto_inicial': 'Deuda Inicial',
-                'Abonado Acumulado': 'Abonado Acumulado', 'monto_total': 'Restante Pendiente', 
-                'cuota_mes': 'Cuota del Mes', 'estado': 'Estado'
-            })
-            
-            df_deudas_mostrar['Deuda Inicial'] = df_deudas_mostrar['Deuda Inicial'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-            df_deudas_mostrar['Abonado Acumulado'] = df_deudas_mostrar['Abonado Acumulado'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-            df_deudas_mostrar['Restante Pendiente'] = df_deudas_mostrar['Restante Pendiente'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-            df_deudas_mostrar['Cuota del Mes'] = df_deudas_mostrar['Cuota del Mes'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-            
-            st.dataframe(df_deudas_mostrar, use_container_width=True)
+            # 2. Renderizamos el editor interactivo
+            # Bloqueamos el ID y el cálculo de 'Abonado Acumulado'
+            df_deudas_editado = st.data_editor(
+                df_deudas_mostrar, 
+                disabled=["id", "Abonado Acumulado (COP)"], 
+                key="editor_deudas",
+                use_container_width=True
+            )
 
-            # Log de Abonos específico para Deudas
+            # 3. Botón para guardar las deudas
+            if st.button("Guardar Cambios en Deudas"):
+                for index, fila in df_deudas_editado.iterrows():
+                    query = """
+                        UPDATE deudas 
+                        SET deuda = %s, monto_inicial = %s, monto_total = %s, cuota_mes = %s, estado = %s 
+                        WHERE id = %s
+                    """
+                    params = (
+                        fila['deuda'], 
+                        float(fila['monto_inicial']), 
+                        float(fila['monto_total']), 
+                        float(fila['cuota_mes']),
+                        fila['estado'], 
+                        fila['id']
+                    )
+                    ejecutar_sql(query, params)
+                st.success("¡Deudas actualizadas correctamente en la base de datos!")
+                st.rerun()
+
+            # --- Log de Abonos específico para Deudas ---
             st.markdown("---")
-            st.subheader("📜 Historial de Abonos a Deudas")
+            st.markdown("### 📜 Historial de Abonos a Deudas (Editable)")
+            
             try:
+                # Traemos los datos puros de la base de datos
                 df_log_deudas = cargar_datos("SELECT * FROM log_abonos WHERE tipo = 'Deuda' ORDER BY id DESC")
             except:
                 df_log_deudas = pd.DataFrame()
 
             if not df_log_deudas.empty:
-                df_ld_mostrar = df_log_deudas.rename(columns={
-                    'id': 'ID', 'fecha': 'Fecha', 'referencia': 'Deuda', 'monto': 'Monto Abonado'
-                })[['Fecha', 'Deuda', 'Monto Abonado']]
-                df_ld_mostrar['Monto Abonado'] = df_ld_mostrar['Monto Abonado'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-                st.dataframe(df_ld_mostrar, use_container_width=True)
+                # 4. Renderizamos el editor del historial
+                # Bloqueamos 'id' y 'tipo' porque el tipo siempre debe ser 'Deuda'
+                df_log_deudas_editado = st.data_editor(
+                    df_log_deudas, 
+                    disabled=["id", "tipo"], 
+                    key="editor_log_deudas",
+                    use_container_width=True
+                )
+
+                # 5. Botón para guardar el historial
+                if st.button("Guardar Cambios en Historial de Deudas"):
+                    for index, fila in df_log_deudas_editado.iterrows():
+                        query = """
+                            UPDATE log_abonos 
+                            SET fecha = %s, referencia = %s, monto = %s 
+                            WHERE id = %s
+                        """
+                        params = (
+                            fila['fecha'], 
+                            fila['referencia'], 
+                            float(fila['monto']), 
+                            fila['id']
+                        )
+                        ejecutar_sql(query, params)
+                        
+                    st.success("¡Historial de deudas actualizado correctamente!")
+                    st.rerun()
             else:
                 st.info("Aún no hay abonos registrados para deudas.")
         else:
