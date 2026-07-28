@@ -419,43 +419,43 @@ with pestana_deudas:
             df_deudas_mostrar['monto_total'] = df_deudas_mostrar['monto_inicial'] - df_deudas_mostrar['Abonado Acumulado (COP)']
             df_deudas_mostrar['monto_total'] = df_deudas_mostrar['monto_total'].apply(lambda x: max(0, x))
 
-            # 4. Renderizar el editor interactivo
-            # Bloqueamos el ID, el Saldo Pendiente y el Abonado. 
-            # El usuario edita el Inicial; el sistema recalcula el resto.
-            df_deudas_editado = st.data_editor(
-                df_deudas_mostrar, 
-                disabled=["id", "monto_total", "Abonado Acumulado (COP)"], 
-                key="editor_deudas",
-                use_container_width=True
-            )
+            # --- Log de Abonos específico para Deudas ---
+            st.markdown("---")
+            st.markdown("### 📜 Historial de Abonos a Deudas (Editable)")
+            
+            # OPTIMIZACIÓN: Verificamos si la variable de arriba existe y tiene datos
+            # Esto evita hacer un doble llamado a la base de datos que causa el bloqueo
+            if 'df_log_deudas_calc' in locals() and not df_log_deudas_calc.empty:
+                
+                # Ordenamos los datos en memoria para que los más recientes salgan primero
+                df_log_deudas_ordenado = df_log_deudas_calc.sort_values(by='id', ascending=False)
+                
+                # 4. Renderizamos el editor del historial usando los datos en memoria
+                df_log_deudas_editado = st.data_editor(
+                    df_log_deudas_ordenado, 
+                    disabled=["id", "tipo"], 
+                    key="editor_log_deudas",
+                    use_container_width=True
+                )
 
-            # 5. Botón para guardar y consolidar la lógica en PostgreSQL
-            if st.button("Guardar Cambios en Deudas"):
-                for index, fila in df_deudas_editado.iterrows():
-                    # Antes de guardar, aseguramos que el saldo pendiente sea matemáticamente perfecto
-                    nuevo_monto_total = float(fila['monto_inicial']) - float(fila['Abonado Acumulado (COP)'])
-                    nuevo_monto_total = max(0, nuevo_monto_total)
-                    
-                    # Auto-completar la deuda si el saldo llega a cero
-                    nuevo_estado = 'Completada' if nuevo_monto_total <= 0 else fila['estado']
-
-                    query = """
-                        UPDATE deudas 
-                        SET deuda = %s, monto_inicial = %s, monto_total = %s, cuota_mes = %s, estado = %s 
-                        WHERE id = %s
-                    """
-                    params = (
-                        fila['deuda'], 
-                        float(fila['monto_inicial']), 
-                        nuevo_monto_total, 
-                        float(fila['cuota_mes']),
-                        nuevo_estado, 
-                        fila['id']
-                    )
-                    ejecutar_sql(query, params)
-                    
-                st.success("¡Deudas actualizadas! Los saldos pendientes se recalcularon automáticamente.")
-                st.rerun()
+                # 5. Botón para guardar el historial
+                if st.button("Guardar Cambios en Historial de Deudas"):
+                    for index, fila in df_log_deudas_editado.iterrows():
+                        query = """
+                            UPDATE log_abonos 
+                            SET fecha = %s, referencia = %s, monto = %s 
+                            WHERE id = %s
+                        """
+                        params = (
+                            fila['fecha'], 
+                            fila['referencia'], 
+                            float(fila['monto']), 
+                            fila['id']
+                        )
+                        ejecutar_sql(query, params)
+                        
+                    st.success("¡Historial de deudas actualizado correctamente!")
+                    st.rerun()
             else:
                 st.info("Aún no hay abonos registrados para deudas.")
         else:
