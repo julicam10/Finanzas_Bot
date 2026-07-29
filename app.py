@@ -397,9 +397,9 @@ with pestana_deudas:
             
             st.altair_chart(grafico_deudas, use_container_width=True)
 
-            st.markdown("### 💳 Detalle y Edición de Deudas")
+            st.markdown("### 💳 Detalle de Deudas")
             
-            # --- 1. PREPARACIÓN DE DATOS DE DEUDAS ---
+            # --- 1. PREPARACIÓN DE DATOS Y CÁLCULO REAL ---
             try:
                 # Obtenemos los abonos para calcular lo pagado realmente
                 df_log_deudas_calc = cargar_datos("SELECT * FROM log_abonos WHERE tipo = 'Deuda'")
@@ -411,82 +411,126 @@ with pestana_deudas:
             except:
                 abonos_agrupados = pd.DataFrame(columns=['deuda', 'Abonado Acumulado (COP)'])
 
-            # Unimos la información
             df_deudas_mostrar = df_deudas_filtradas.copy()
             if not df_deudas_mostrar.empty:
+                # Unimos y recalculamos saldos de forma segura
                 df_deudas_mostrar = pd.merge(df_deudas_mostrar, abonos_agrupados, on='deuda', how='left')
                 df_deudas_mostrar['Abonado Acumulado (COP)'] = df_deudas_mostrar['Abonado Acumulado (COP)'].fillna(0)
                 
-                # Recalculamos el saldo pendiente de forma segura
                 df_deudas_mostrar['monto_total'] = df_deudas_mostrar['monto_inicial'] - df_deudas_mostrar['Abonado Acumulado (COP)']
                 df_deudas_mostrar['monto_total'] = df_deudas_mostrar['monto_total'].apply(lambda x: max(0, x))
 
-                # --- 2. RENDERIZADO DE LA TABLA SUPERIOR (DEUDAS) ---
-                df_deudas_editado = st.data_editor(
-                    df_deudas_mostrar, 
-                    disabled=["id", "monto_total", "Abonado Acumulado (COP)"], 
-                    key="editor_deudas",
-                    use_container_width=True
-                )
+                # --- 2. TABLA VISUAL DE LECTURA (Formato COP) ---
+                df_deudas_visual = df_deudas_mostrar.copy()
+                df_deudas_visual['Monto Inicial'] = df_deudas_visual['monto_inicial'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+                df_deudas_visual['Saldo Pendiente'] = df_deudas_visual['monto_total'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+                df_deudas_visual['Cuota Mensual'] = df_deudas_visual['cuota_mes'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+                df_deudas_visual['Abonado Acumulado'] = df_deudas_visual['Abonado Acumulado (COP)'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+                
+                df_deudas_visual = df_deudas_visual[['id', 'deuda', 'Monto Inicial', 'Saldo Pendiente', 'Cuota Mensual', 'estado', 'Abonado Acumulado']]
+                df_deudas_visual = df_deudas_visual.rename(columns={'id': 'ID', 'deuda': 'Deuda', 'estado': 'Estado'})
+                
+                st.dataframe(df_deudas_visual, use_container_width=True)
 
-                if st.button("Guardar Cambios en Deudas"):
-                    for index, fila in df_deudas_editado.iterrows():
-                        nuevo_monto_total = float(fila['monto_inicial']) - float(fila['Abonado Acumulado (COP)'])
-                        nuevo_monto_total = max(0, nuevo_monto_total)
-                        nuevo_estado = 'Completada' if nuevo_monto_total <= 0 else fila['estado']
-
-                        query = """
-                            UPDATE deudas 
-                            SET deuda = %s, monto_inicial = %s, monto_total = %s, cuota_mes = %s, estado = %s 
-                            WHERE id = %s
-                        """
-                        params = (
-                            fila['deuda'], 
-                            float(fila['monto_inicial']), 
-                            nuevo_monto_total, 
-                            float(fila['cuota_mes']),
-                            nuevo_estado, 
-                            fila['id']
-                        )
-                        ejecutar_sql(query, params)
+                # --- 3. PANEL DESPLEGABLE DE EDICIÓN (Deudas) ---
+                with st.expander("✏️ Editar o Eliminar una Deuda"):
+                    deudas_lista = df_deudas_mostrar['deuda'].tolist()
+                    deuda_sel = st.selectbox("Selecciona la deuda a modificar:", deudas_lista, key="sel_deuda_edit")
+                    
+                    if deuda_sel:
+                        fila_sel = df_deudas_mostrar[df_deudas_mostrar['deuda'] == deuda_sel].iloc[0]
                         
-                    st.success("¡Deudas actualizadas!")
-                    st.rerun()
+                        col_d1, col_d2, col_d3 = st.columns(3)
+                        with col_d1:
+                            nueva_deuda = st.text_input("Nombre de la Deuda", value=fila_sel['deuda'])
+                            opciones_estado_d = ['Pendiente', 'Completada']
+                            estado_actual_d = fila_sel['estado'] if fila_sel['estado'] in opciones_estado_d else 'Pendiente'
+                            nuevo_estado_d = st.selectbox("Estado", opciones_estado_d, index=opciones_estado_d.index(estado_actual_d))
+                        with col_d2:
+                            nuevo_inicial = st.number_input("Monto Inicial (COP)", value=int(fila_sel['monto_inicial']), step=100000, format="%d")
+                        with col_d3:
+                            nueva_cuota = st.number_input("Cuota Mensual (COP)", value=int(fila_sel['cuota_mes']), step=50000, format="%d")
+                            
+                        col_db1, col_db2 = st.columns(2)
+                        with col_db1:
+                            if st.button("Guardar Cambios en Deuda", use_container_width=True):
+                                # Recalcular matemáticamente el saldo pendiente
+                                nuevo_saldo = float(nuevo_inicial) - float(fila_sel['Abonado Acumulado (COP)'])
+                                nuevo_saldo = max(0, nuevo_saldo)
+                                
+                                # Auto-completar si la deuda quedó saldada
+                                if nuevo_saldo <= 0:
+                                    nuevo_estado_d = 'Completada'
+                                    
+                                query = """
+                                    UPDATE deudas 
+                                    SET deuda = %s, monto_inicial = %s, monto_total = %s, cuota_mes = %s, estado = %s 
+                                    WHERE id = %s
+                                """
+                                params = (nueva_deuda, float(nuevo_inicial), nuevo_saldo, float(nueva_cuota), nuevo_estado_d, int(fila_sel['id']))
+                                ejecutar_sql(query, params)
+                                st.success("¡Deuda actualizada!")
+                                st.rerun()
+                        with col_db2:
+                            if st.button("Eliminar Deuda", type="primary", use_container_width=True):
+                                query = "DELETE FROM deudas WHERE id = %s"
+                                ejecutar_sql(query, (int(fila_sel['id']),))
+                                st.warning("¡Deuda eliminada!")
+                                st.rerun()
             else:
                 st.info("No hay deudas para mostrar en este momento.")
 
-            # --- 3. RENDERIZADO DE LA TABLA INFERIOR (HISTORIAL) ---
+            # --- 4. TABLA VISUAL Y EDICIÓN DEL HISTORIAL DE ABONOS ---
             st.markdown("---")
-            st.markdown("### 📜 Historial de Abonos a Deudas (Editable)")
+            st.markdown("### 📜 Historial de Abonos a Deudas")
             
-            # Reutilizamos los datos en memoria para no saturar la base de datos
+            # Reutilizamos los datos consultados arriba para no saturar la base de datos
             if 'df_log_deudas_calc' in locals() and not df_log_deudas_calc.empty:
-                df_log_deudas_ordenado = df_log_deudas_calc.sort_values(by='id', ascending=False)
+                df_log_deudas = df_log_deudas_calc.sort_values(by='id', ascending=False)
                 
-                df_log_deudas_editado = st.data_editor(
-                    df_log_deudas_ordenado, 
-                    disabled=["id", "tipo"], 
-                    key="editor_log_deudas",
-                    use_container_width=True
-                )
+                # Tabla Visual del Historial
+                df_log_deudas_visual = df_log_deudas.copy()
+                df_log_deudas_visual['Monto Abonado'] = df_log_deudas_visual['monto'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+                df_log_deudas_visual = df_log_deudas_visual[['id', 'fecha', 'referencia', 'Monto Abonado']].rename(columns={
+                    'id': 'ID', 'fecha': 'Fecha', 'referencia': 'Deuda'
+                })
+                st.dataframe(df_log_deudas_visual, use_container_width=True)
 
-                if st.button("Guardar Cambios en Historial de Deudas"):
-                    for index, fila in df_log_deudas_editado.iterrows():
-                        query = """
-                            UPDATE log_abonos 
-                            SET fecha = %s, referencia = %s, monto = %s 
-                            WHERE id = %s
-                        """
-                        params = (
-                            fila['fecha'], 
-                            fila['referencia'], 
-                            float(fila['monto']), 
-                            fila['id']
-                        )
-                        ejecutar_sql(query, params)
+                # Panel de Edición del Historial
+                with st.expander("✏️ Editar o Eliminar un Abono de Deuda"):
+                    opciones_log_d = []
+                    for _, row in df_log_deudas.iterrows():
+                        etiqueta = f"ID {row['id']} | {row['fecha']} | {row['referencia']} | $ {row['monto']:,.0f}".replace(",", ".")
+                        opciones_log_d.append((row['id'], etiqueta))
+                    
+                    etiquetas_log_d = [op[1] for op in opciones_log_d]
+                    log_sel_etiqueta_d = st.selectbox("Selecciona el abono a modificar:", etiquetas_log_d, key="sel_log_deuda")
+                    
+                    if log_sel_etiqueta_d:
+                        id_seleccionado_d = next(op[0] for op in opciones_log_d if op[1] == log_sel_etiqueta_d)
+                        fila_log_d = df_log_deudas[df_log_deudas['id'] == id_seleccionado_d].iloc[0]
                         
-                    st.success("¡Historial de deudas actualizado correctamente!")
-                    st.rerun()
+                        col_ld1, col_ld2, col_ld3 = st.columns(3)
+                        with col_ld1:
+                            nueva_fecha_d = st.text_input("Fecha (YYYY-MM-DD)", value=str(fila_log_d['fecha']), key="fecha_d")
+                        with col_ld2:
+                            nueva_ref_d = st.text_input("Referencia (Deuda)", value=fila_log_d['referencia'], key="ref_d")
+                        with col_ld3:
+                            nuevo_monto_d = st.number_input("Monto Abonado (COP)", value=int(fila_log_d['monto']), step=50000, format="%d", key="monto_d")
+                            
+                        col_ldb1, col_ldb2 = st.columns(2)
+                        with col_ldb1:
+                            if st.button("Guardar Cambios en Historial", use_container_width=True, key="btn_save_log_d"):
+                                query = "UPDATE log_abonos SET fecha = %s, referencia = %s, monto = %s WHERE id = %s"
+                                ejecutar_sql(query, (nueva_fecha_d, nueva_ref_d, float(nuevo_monto_d), int(id_seleccionado_d)))
+                                st.success("¡Historial actualizado!")
+                                st.rerun()
+                        with col_ldb2:
+                            if st.button("Eliminar Registro", type="primary", use_container_width=True, key="btn_del_log_d"):
+                                query = "DELETE FROM log_abonos WHERE id = %s"
+                                ejecutar_sql(query, (int(id_seleccionado_d),))
+                                st.warning("¡Registro eliminado!")
+                                st.rerun()
             else:
                 st.info("Aún no hay abonos registrados para deudas.")
         else:
@@ -794,7 +838,7 @@ with pestana_inversiones:
                             st.rerun()
                             
                     with col_b2:
-                        if st.button("Eliminar Activo"):
+                        if st.button("Eliminar Activo", type="primary", use_container_width=True):
                             query = "DELETE FROM inversiones WHERE id = %s"
                             ejecutar_sql(query, (int(fila_sel['id']),))
                             st.warning("¡Activo eliminado!")
