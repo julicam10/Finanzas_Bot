@@ -568,82 +568,129 @@ with pestana_metas:
             ).properties(height=350)
             st.altair_chart(grafico_metas, use_container_width=True)
 
-            st.markdown("### 🎯 Detalle y Edición de Metas de Ahorro")
+            st.markdown("### 🎯 Detalle de Metas de Ahorro")
             
-            # 1. Preparamos el DataFrame con los cálculos, pero manteniendo los números puros (sin el símbolo $) 
-            # para que Streamlit permita editarlos matemáticamente
+            # --- 1. TABLA VISUAL DE METAS (Lectura con formato COP impecable) ---
             df_metas_mostrar = df_metas_filtradas.copy()
+            
+            # Cálculos matemáticos previos
             df_metas_mostrar['Restante (COP)'] = df_metas_mostrar['monto_objetivo'] - df_metas_mostrar['monto_actual']
             df_metas_mostrar['Restante (COP)'] = df_metas_mostrar['Restante (COP)'].apply(lambda x: max(0, x))
             df_metas_mostrar['Progreso (%)'] = (df_metas_mostrar['monto_actual'] / df_metas_mostrar['monto_objetivo']) * 100
             
-            # 2. Renderizamos el editor interactivo
-            # Bloqueamos el ID y las columnas calculadas para proteger la base de datos
-            df_metas_editado = st.data_editor(
-                df_metas_mostrar, 
-                disabled=["id", "Restante (COP)", "Progreso (%)"], 
-                key="editor_metas",
-                use_container_width=True
-            )
+            # Aplicamos la capa de formato estético (Puntos de mil y símbolo $)
+            df_metas_mostrar['Monto Objetivo'] = df_metas_mostrar['monto_objetivo'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+            df_metas_mostrar['Ahorrado Actual'] = df_metas_mostrar['monto_actual'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+            df_metas_mostrar['Restante (COP)'] = df_metas_mostrar['Restante (COP)'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+            df_metas_mostrar['Progreso (%)'] = df_metas_mostrar['Progreso (%)'].apply(lambda x: f"{x:.2f}%")
+            
+            # Organizamos las columnas para presentarlas
+            df_metas_visual = df_metas_mostrar[['id', 'nombre_meta', 'Monto Objetivo', 'Ahorrado Actual', 'estrategia', 'estado', 'Restante (COP)', 'Progreso (%)']]
+            df_metas_visual = df_metas_visual.rename(columns={'id': 'ID', 'nombre_meta': 'Meta', 'estrategia': 'Estrategia', 'estado': 'Estado'})
+            
+            st.dataframe(df_metas_visual, use_container_width=True)
 
-            # 3. Botón para guardar las metas
-            if st.button("Guardar Cambios en Metas"):
-                for index, fila in df_metas_editado.iterrows():
-                    query = """
-                        UPDATE metas_ahorro 
-                        SET nombre_meta = %s, monto_objetivo = %s, monto_actual = %s, estrategia = %s, estado = %s 
-                        WHERE id = %s
-                    """
-                    params = (
-                        fila['nombre_meta'], 
-                        float(fila['monto_objetivo']), 
-                        float(fila['monto_actual']), 
-                        fila['estrategia'], 
-                        fila['estado'], 
-                        fila['id']
-                    )
-                    ejecutar_sql(query, params)
-                st.success("¡Metas actualizadas correctamente en la base de datos!")
-                st.rerun()
+            # --- 2. PANEL DESPLEGABLE DE EDICIÓN (Metas) ---
+            with st.expander("✏️ Editar o Eliminar una Meta de Ahorro"):
+                metas_lista = df_metas_filtradas['nombre_meta'].tolist()
+                meta_sel = st.selectbox("Selecciona la meta a modificar:", metas_lista, key="sel_meta_edit")
+                
+                if meta_sel:
+                    # Extraemos la fila original de la base de datos (con números puros)
+                    fila_sel = df_metas_filtradas[df_metas_filtradas['nombre_meta'] == meta_sel].iloc[0]
+                    
+                    col_m1, col_m2, col_m3 = st.columns(3)
+                    with col_m1:
+                        nuevo_nombre = st.text_input("Nombre de la Meta", value=fila_sel['nombre_meta'])
+                        nueva_estrategia = st.text_input("Estrategia", value=fila_sel['estrategia'])
+                    with col_m2:
+                        nuevo_objetivo = st.number_input("Monto Objetivo (COP)", value=int(fila_sel['monto_objetivo']), step=100000, format="%d")
+                        nuevo_actual = st.number_input("Ahorrado Actual (COP)", value=int(fila_sel['monto_actual']), step=50000, format="%d")
+                    with col_m3:
+                        opciones_estado = ['En curso', 'Completada', 'Pausada']
+                        estado_actual = fila_sel['estado'] if fila_sel['estado'] in opciones_estado else 'En curso'
+                        nuevo_estado = st.selectbox("Estado", opciones_estado, index=opciones_estado.index(estado_actual))
 
-            # --- Log de Abonos específico para Metas ---
+                    col_mb1, col_mb2 = st.columns(2)
+                    with col_mb1:
+                        if st.button("Guardar Cambios en Meta", use_container_width=True):
+                            # Control inteligente: Si el nuevo ahorro supera el objetivo, se marca completada sola
+                            if nuevo_actual >= nuevo_objetivo:
+                                nuevo_estado = 'Completada'
+                                
+                            query = """
+                                UPDATE metas_ahorro 
+                                SET nombre_meta = %s, monto_objetivo = %s, monto_actual = %s, estrategia = %s, estado = %s 
+                                WHERE id = %s
+                            """
+                            params = (nuevo_nombre, float(nuevo_objetivo), float(nuevo_actual), nueva_estrategia, nuevo_estado, int(fila_sel['id']))
+                            ejecutar_sql(query, params)
+                            st.success("¡Meta actualizada correctamente!")
+                            st.rerun()
+                            
+                    with col_mb2:
+                        # Botón destructivo en rojo (type="primary" en temas oscuros/claros de Streamlit)
+                        if st.button("Eliminar Meta", type="primary", use_container_width=True):
+                            query = "DELETE FROM metas_ahorro WHERE id = %s"
+                            ejecutar_sql(query, (int(fila_sel['id']),))
+                            st.warning("¡Meta eliminada!")
+                            st.rerun()
+
+            # --- 3. TABLA VISUAL Y EDICIÓN DEL HISTORIAL DE ABONOS ---
             st.markdown("---")
-            st.markdown("### 📜 Historial de Ahorros a Metas (Editable)")
+            st.markdown("### 📜 Historial de Ahorros a Metas")
             
             try:
-                # Traemos los datos puros de la base de datos
                 df_log_metas = cargar_datos("SELECT * FROM log_abonos WHERE tipo = 'Meta' ORDER BY id DESC")
             except:
                 df_log_metas = pd.DataFrame()
 
             if not df_log_metas.empty:
-                # 4. Renderizamos el editor del historial
-                # Bloqueamos 'id' y 'tipo' porque el tipo siempre debe ser 'Meta' aquí
-                df_log_editado = st.data_editor(
-                    df_log_metas, 
-                    disabled=["id", "tipo"], 
-                    key="editor_log_metas",
-                    use_container_width=True
-                )
+                # Tabla Visual Historial
+                df_log_metas_visual = df_log_metas.copy()
+                df_log_metas_visual['Monto Abonado'] = df_log_metas_visual['monto'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+                df_log_metas_visual = df_log_metas_visual[['id', 'fecha', 'referencia', 'Monto Abonado']].rename(columns={
+                    'id': 'ID', 'fecha': 'Fecha', 'referencia': 'Meta'
+                })
+                st.dataframe(df_log_metas_visual, use_container_width=True)
 
-                # 5. Botón para guardar el historial
-                if st.button("Guardar Cambios en Historial"):
-                    for index, fila in df_log_editado.iterrows():
-                        query = """
-                            UPDATE log_abonos 
-                            SET fecha = %s, referencia = %s, monto = %s 
-                            WHERE id = %s
-                        """
-                        params = (
-                            fila['fecha'], 
-                            fila['referencia'], 
-                            float(fila['monto']), 
-                            fila['id']
-                        )
-                        ejecutar_sql(query, params)
+                # Panel de Edición Historial
+                with st.expander("✏️ Editar o Eliminar un Abono del Historial"):
+                    # Construimos etiquetas amigables para encontrar fácilmente el registro
+                    opciones_log = []
+                    for _, row in df_log_metas.iterrows():
+                        etiqueta = f"ID {row['id']} | {row['fecha']} | {row['referencia']} | $ {row['monto']:,.0f}".replace(",", ".")
+                        opciones_log.append((row['id'], etiqueta))
+                    
+                    etiquetas_log = [op[1] for op in opciones_log]
+                    log_sel_etiqueta = st.selectbox("Selecciona el registro a modificar:", etiquetas_log)
+                    
+                    if log_sel_etiqueta:
+                        # Vinculamos la etiqueta visual con el ID real
+                        id_seleccionado = next(op[0] for op in opciones_log if op[1] == log_sel_etiqueta)
+                        fila_log = df_log_metas[df_log_metas['id'] == id_seleccionado].iloc[0]
                         
-                    st.success("¡Historial actualizado correctamente!")
-                    st.rerun()
+                        col_l1, col_l2, col_l3 = st.columns(3)
+                        with col_l1:
+                            nueva_fecha_log = st.text_input("Fecha (YYYY-MM-DD)", value=str(fila_log['fecha']))
+                        with col_l2:
+                            nueva_ref_log = st.text_input("Referencia (Meta)", value=fila_log['referencia'])
+                        with col_l3:
+                            nuevo_monto_log = st.number_input("Monto Abonado (COP)", value=int(fila_log['monto']), step=50000, format="%d")
+                            
+                        col_lb1, col_lb2 = st.columns(2)
+                        with col_lb1:
+                            if st.button("Guardar Cambios en Historial", use_container_width=True):
+                                query = "UPDATE log_abonos SET fecha = %s, referencia = %s, monto = %s WHERE id = %s"
+                                ejecutar_sql(query, (nueva_fecha_log, nueva_ref_log, float(nuevo_monto_log), int(id_seleccionado)))
+                                st.success("¡Historial actualizado!")
+                                st.rerun()
+                        with col_lb2:
+                            if st.button("Eliminar Registro", type="primary", use_container_width=True):
+                                query = "DELETE FROM log_abonos WHERE id = %s"
+                                ejecutar_sql(query, (int(id_seleccionado),))
+                                st.warning("¡Registro eliminado!")
+                                st.rerun()
             else:
                 st.info("Aún no hay abonos registrados para metas.")
                 
