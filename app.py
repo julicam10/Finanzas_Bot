@@ -110,33 +110,64 @@ with pestana_trans:
         df_mes_actual = df_transacciones[df_transacciones['fecha'].str.startswith(mes_actual)].copy()
         
         if not df_mes_actual.empty:
-            df_editado = st.data_editor(
-                df_mes_actual,
-                use_container_width=True,
-                num_rows="dynamic",
-                key="editor_transacciones_mes",
-                hide_index=True
-            )
+            # --- 1. TABLA VISUAL DE LECTURA (Formato COP impecable) ---
+            df_trans_visual = df_mes_actual.copy()
             
-            if st.button("💾 Guardar Cambios del Mes"):
-                # 1. Conexión manual para borrar registros antiguos del mes
-                conexion = psycopg2.connect(os.environ.get("DATABASE_URL"))
-                cursor = conexion.cursor()
+            # Aplicamos la capa de formato estético al monto
+            df_trans_visual['Monto'] = df_trans_visual['monto'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+            
+            # Renombramos y organizamos para la presentación
+            df_trans_visual = df_trans_visual[['id', 'fecha', 'concepto', 'categoria', 'Monto', 'metodo_pago']].rename(columns={
+                'id': 'ID', 'fecha': 'Fecha', 'concepto': 'Concepto', 'categoria': 'Categoría', 'metodo_pago': 'Método de Pago'
+            })
+            
+            st.dataframe(df_trans_visual, use_container_width=True)
+
+            # --- 2. PANEL DESPLEGABLE DE EDICIÓN (Transacciones) ---
+            with st.expander("✏️ Editar o Eliminar un Gasto"):
+                # Construimos etiquetas únicas: ID | Fecha | Concepto | Monto
+                opciones_trans = []
+                for _, row in df_mes_actual.iterrows():
+                    etiqueta = f"ID {row['id']} | {row['fecha']} | {row['concepto']} | $ {row['monto']:,.0f}".replace(",", ".")
+                    opciones_trans.append((row['id'], etiqueta))
                 
-                # OJO: En PostgreSQL usamos %s en lugar de %s
-                cursor.execute("DELETE FROM transacciones WHERE fecha LIKE %s", (f"{mes_actual}%",))
-                conexion.commit()
-                conexion.close()
+                etiquetas_trans = [op[1] for op in opciones_trans]
+                trans_sel_etiqueta = st.selectbox("Selecciona el gasto a modificar:", etiquetas_trans, key="sel_trans_edit")
                 
-                # 2. Conexión con SQLAlchemy para insertar la tabla editada
-                url_db = os.environ.get("DATABASE_URL").replace("postgres://", "postgresql://")
-                engine = create_engine(url_db)
-                
-                df_editado.to_sql("transacciones", engine, if_exists="append", index=False)
-                
-                st.success("¡Transacciones del mes actualizadas con éxito!")
-                st.rerun()
-                
+                if trans_sel_etiqueta:
+                    # Extraemos el ID real a partir de la selección
+                    id_seleccionado_t = next(op[0] for op in opciones_trans if op[1] == trans_sel_etiqueta)
+                    fila_trans = df_mes_actual[df_mes_actual['id'] == id_seleccionado_t].iloc[0]
+                    
+                    col_g1, col_g2 = st.columns(2)
+                    with col_g1:
+                        nueva_fecha_t = st.text_input("Fecha (YYYY-MM-DD)", value=str(fila_trans['fecha']))
+                        nuevo_concepto_t = st.text_input("Concepto", value=fila_trans['concepto'])
+                        nueva_categoria_t = st.text_input("Categoría", value=fila_trans['categoria'])
+                    with col_g2:
+                        nuevo_monto_t = st.number_input("Monto (COP)", value=int(fila_trans['monto']), step=10000, format="%d")
+                        nuevo_metodo_t = st.text_input("Método de Pago", value=fila_trans['metodo_pago'])
+                        
+                    col_gb1, col_gb2 = st.columns(2)
+                    with col_gb1:
+                        if st.button("Guardar Cambios en Gasto", use_container_width=True):
+                            query = """
+                                UPDATE transacciones 
+                                SET fecha = %s, concepto = %s, categoria = %s, monto = %s, metodo_pago = %s 
+                                WHERE id = %s
+                            """
+                            params = (nueva_fecha_t, nuevo_concepto_t, nueva_categoria_t, float(nuevo_monto_t), nuevo_metodo_t, int(id_seleccionado_t))
+                            ejecutar_sql(query, params)
+                            st.success("¡Transacción actualizada correctamente!")
+                            st.rerun()
+                    with col_gb2:
+                        if st.button("Eliminar Gasto", type="primary", use_container_width=True):
+                            query = "DELETE FROM transacciones WHERE id = %s"
+                            ejecutar_sql(query, (int(id_seleccionado_t),))
+                            st.warning("¡Transacción eliminada!")
+                            st.rerun()
+            
+            # --- 3. GRÁFICA INTACTA ---
             st.markdown("---")
             st.subheader("Gastos por Categoría (Mes Actual)")
             df_categoria = df_mes_actual.groupby('categoria')['monto'].sum().reset_index()
