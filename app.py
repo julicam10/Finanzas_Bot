@@ -255,41 +255,71 @@ with pestana_presupuestos:
             st.rerun()
 
     st.markdown("---")
-    st.subheader("📋 Editar Tus Presupuestos Registrados")
+    st.subheader("📋 Detalle y Edición de Tus Presupuestos")
     
     if not df_presupuestos.empty:
-        # Seleccionamos solo las columnas originales para evitar errores al guardar
-        columnas_db = ['id', 'mes', 'categoria', 'tipo', 'limite']
-        # Por seguridad comprobamos que existan, si no, usamos el df original
-        df_editar = df_presupuestos[columnas_db].copy() if set(columnas_db).issubset(df_presupuestos.columns) else df_presupuestos
+        # --- 1. TABLA VISUAL DE LECTURA (Formato COP impecable) ---
+        df_pres_visual = df_presupuestos.copy()
         
-        # Mostramos el editor interactivo en vez del dataframe estático
-        df_pres_editado = st.data_editor(
-            df_editar,
-            use_container_width=True,
-            num_rows="dynamic",
-            key="editor_presupuestos",
-            hide_index=True
-        )
+        # Aplicamos la capa de formato estético al límite
+        df_pres_visual['Límite'] = df_pres_visual['limite'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
         
-        # Botón para guardar los cambios
-        if st.button("💾 Guardar Cambios en Presupuestos"):
-            # Para borrar los datos antiguos
-            conexion = psycopg2.connect(os.environ.get("DATABASE_URL"))
-            cursor = conexion.cursor()
-            cursor.execute("DELETE FROM presupuestos") # (o transacciones)
-            conexion.commit()
-            conexion.close()
+        # Renombramos y organizamos para la presentación
+        df_pres_visual = df_pres_visual[['id', 'mes', 'categoria', 'tipo', 'Límite']].rename(columns={
+            'id': 'ID', 'mes': 'Mes', 'categoria': 'Categoría', 'tipo': 'Tipo'
+        })
+        
+        st.dataframe(df_pres_visual, use_container_width=True)
 
-            # Para guardar la tabla editada
-            url_db = os.environ.get("DATABASE_URL").replace("postgres://", "postgresql://")
-            engine = create_engine(url_db)
-            df_pres_editado.to_sql("presupuestos", engine, if_exists="append", index=False)
-
-            st.success("¡Presupuestos actualizados con éxito!")
-            st.rerun()
+        # --- 2. PANEL DESPLEGABLE DE EDICIÓN (Presupuestos) ---
+        with st.expander("✏️ Editar o Eliminar un Presupuesto"):
+            # Construimos etiquetas únicas usando Mes + Categoría + Monto para identificarlos fácilmente
+            opciones_pres = []
+            for _, row in df_presupuestos.iterrows():
+                etiqueta = f"ID {row['id']} | {row['mes']} | {row['categoria']} | $ {row['limite']:,.0f}".replace(",", ".")
+                opciones_pres.append((row['id'], etiqueta))
             
-        # --- Mantenemos tu gráfica circular intacta debajo de la tabla ---
+            etiquetas_pres = [op[1] for op in opciones_pres]
+            pres_sel_etiqueta = st.selectbox("Selecciona el presupuesto a modificar:", etiquetas_pres, key="sel_presupuesto_edit")
+            
+            if pres_sel_etiqueta:
+                # Extraemos el ID real a partir de la selección
+                id_seleccionado_p = next(op[0] for op in opciones_pres if op[1] == pres_sel_etiqueta)
+                fila_pres = df_presupuestos[df_presupuestos['id'] == id_seleccionado_p].iloc[0]
+                
+                col_p1, col_p2 = st.columns(2)
+                with col_p1:
+                    nuevo_mes_p = st.text_input("Mes (YYYY-MM)", value=str(fila_pres['mes']))
+                    nueva_categoria_p = st.text_input("Categoría", value=fila_pres['categoria'])
+                with col_p2:
+                    # Opciones basadas en las que usas en tu gráfico
+                    opciones_tipo = ['Inversión', 'Necesidad', 'Gasto General', 'Ahorro']
+                    tipo_actual = fila_pres['tipo'] if fila_pres['tipo'] in opciones_tipo else 'Necesidad'
+                    nuevo_tipo_p = st.selectbox("Tipo", opciones_tipo, index=opciones_tipo.index(tipo_actual))
+                    
+                    nuevo_limite_p = st.number_input("Límite (COP)", value=int(fila_pres['limite']), step=50000, format="%d")
+                    
+                col_pb1, col_pb2 = st.columns(2)
+                with col_pb1:
+                    if st.button("Guardar Cambios en Presupuesto", use_container_width=True):
+                        query = """
+                            UPDATE presupuestos 
+                            SET mes = %s, categoria = %s, tipo = %s, limite = %s 
+                            WHERE id = %s
+                        """
+                        params = (nuevo_mes_p, nueva_categoria_p, nuevo_tipo_p, float(nuevo_limite_p), int(id_seleccionado_p))
+                        ejecutar_sql(query, params)
+                        st.success("¡Presupuesto actualizado correctamente!")
+                        st.rerun()
+                with col_pb2:
+                    if st.button("Eliminar Presupuesto", type="primary", use_container_width=True):
+                        query = "DELETE FROM presupuestos WHERE id = %s"
+                        ejecutar_sql(query, (int(id_seleccionado_p),))
+                        st.warning("¡Presupuesto eliminado!")
+                        st.rerun()
+
+        # --- 3. GRÁFICA CIRCULAR Y RESUMEN (Intacto de tu código original) ---
+        st.markdown("---")
         st.markdown("### 📊 Distribución por Tipo de Gasto / Inversión")
         df_tipo_resumen = df_presupuestos.groupby('tipo')['limite'].sum().reset_index()
         df_tipo_resumen['Porcentaje'] = (df_tipo_resumen['limite'] / total_presupuestado) * 100 if total_presupuestado > 0 else 0
@@ -831,7 +861,7 @@ with pestana_inversiones:
                     
                     col_b1, col_b2 = st.columns(2)
                     with col_b1:
-                        if st.button("Guardar Cambios"):
+                        if st.button("Guardar Cambios", use_container_width=True):
                             query = "UPDATE inversiones SET activo = %s, monto_invertido = %s WHERE id = %s"
                             ejecutar_sql(query, (nuevo_nombre_activo, float(nuevo_monto_activo), int(fila_sel['id'])))
                             st.success("¡Activo actualizado!")
