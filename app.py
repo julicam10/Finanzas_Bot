@@ -408,14 +408,14 @@ with pestana_deudas:
         df_deudas_filtradas = df_deudas if ver_completadas_d else df_deudas[df_deudas['estado'] != 'Completada']
 
         if not df_deudas_filtradas.empty:
-            st.markdown("### 💸 Registrar Abono a Deuda")
+            st.markdown("### 💸 Registrar abono a deuda")
             with st.form("form_abono_deuda", clear_on_submit=True):
                 col_ab1, col_ab2 = st.columns(2)
                 with col_ab1:
                     deudas_activas_lista = df_deudas[df_deudas['estado'] != 'Completada']['deuda'].tolist()
-                    deuda_a_abonar = st.selectbox("Selecciona la Deuda", deudas_activas_lista if deudas_activas_lista else ["Sin deudas pendientes"])
+                    deuda_a_abonar = st.selectbox("Selecciona la deuda", deudas_activas_lista if deudas_activas_lista else ["Sin deudas pendientes"])
                 with col_ab2:
-                    monto_abono = st.number_input("Monto a Abonar (COP)", min_value=0, value=0, step=10000, format="%d")
+                    monto_abono = st.number_input("Monto a abonar (COP)", min_value=0, value=0, step=10000, format="%d")
                 
                 btn_abonar = st.form_submit_button("Aplicar Abono")
                 if btn_abonar and monto_abono > 0 and deuda_a_abonar != "Sin deudas pendientes":
@@ -433,7 +433,7 @@ with pestana_deudas:
                     st.rerun()
 
             st.markdown("---")
-            st.subheader("📊 Comparativa de Deudas (Inicial vs Saldo Actual)")
+            st.subheader("📊 Progreso de abonos a deudas)")
             
             df_deudas_melted = df_deudas_filtradas.melt(id_vars=['deuda'], value_vars=['monto_inicial', 'monto_total'],
                                                         var_name='Concepto', value_name='Monto')
@@ -447,18 +447,33 @@ with pestana_deudas:
                 range=['#CD040E', '#FC5F67'] 
             )
 
-            # 2. Inyectamos alt.Color con la escala dentro del encode
+            # 1. Definimos la escala de colores explícita (puedes cambiar los códigos #HEX por los que prefieras)
+            escala_colores_deudas = alt.Scale(
+                domain=['Deuda Inicial', 'Saldo Pendiente'], # Nombres exactos de tu leyenda
+                range=['#CC0000', '#FF6666']                 # Colores: Rojo oscuro y Rojo claro
+            )
+
             grafico_deudas = alt.Chart(df_deudas_melted).mark_bar().encode(
-                x=alt.X('deuda:N', title='Deuda'),
+                x=alt.X('deuda:N', title='Deuda', axis=alt.Axis(
+                    labelAngle=0, 
+                    labelExpr="split(datum.value, ' ')"
+                )),
                 y=alt.Y('Monto:Q', axis=alt.Axis(format=',.0f', title='COP')),
+                
+                # 2. Inyectamos la escala en el parámetro color
                 color=alt.Color('Concepto:N', scale=escala_colores_deudas),
+                
                 xOffset='Concepto:N',
-                tooltip=['deuda', 'Concepto', alt.Tooltip('Monto:Q', format=',.0f')]
+                tooltip=[
+                    alt.Tooltip('deuda:N', title='Deuda'), 
+                    'Concepto', 
+                    alt.Tooltip('Monto:Q', format=',.0f')
+                ]
             ).properties(height=350)
             
             st.altair_chart(grafico_deudas, use_container_width=True)
 
-            st.markdown("### 💳 Detalle de Deudas")
+            st.markdown("### 💳 Detalle de deudas")
             
             # --- 1. PREPARACIÓN DE DATOS Y CÁLCULO REAL ---
             try:
@@ -494,7 +509,7 @@ with pestana_deudas:
                 st.dataframe(df_deudas_visual, use_container_width=True)
 
                 # --- 3. PANEL DESPLEGABLE DE EDICIÓN (Deudas) ---
-                with st.expander("✏️ Editar o Eliminar una Deuda"):
+                with st.expander("✏️ Editar o eliminar una deuda"):
                     deudas_lista = df_deudas_mostrar['deuda'].tolist()
                     deuda_sel = st.selectbox("Selecciona la deuda a modificar:", deudas_lista, key="sel_deuda_edit")
                     
@@ -543,7 +558,7 @@ with pestana_deudas:
 
             # --- 4. TABLA VISUAL Y EDICIÓN DEL HISTORIAL DE ABONOS ---
             st.markdown("---")
-            st.markdown("### 📜 Historial de Abonos a Deudas")
+            st.markdown("### 📜 Historial de abonos a deudas")
             
             # Reutilizamos los datos consultados arriba para no saturar la base de datos
             if 'df_log_deudas_calc' in locals() and not df_log_deudas_calc.empty:
@@ -664,6 +679,12 @@ with pestana_metas:
                 'monto_objetivo': 'Objetivo', 'monto_actual': 'Ahorrado Actual'
             })
             
+            # 1. Definimos la escala de colores explícita 
+            escala_colores_metas = alt.Scale(
+                domain=['Ahorrado Actual', 'Objetivo'], # Nombres exactos de tu variable 'Tipo'
+                range=['#005B9F', '#79C1F8']            # Azul oscuro y Azul claro
+            )
+
             grafico_metas = alt.Chart(df_metas_melted).mark_bar().encode(
                 # 1. labelAngle=0 mantiene el texto estrictamente horizontal
                 # 2. labelExpr="split(datum.value, ' ')" fuerza el salto de línea en cada espacio
@@ -672,7 +693,10 @@ with pestana_metas:
                     labelExpr="split(datum.value, ' ')"
                 )),
                 y=alt.Y('Monto:Q', axis=alt.Axis(format=',.0f', title='COP')),
-                color='Tipo:N',
+                
+                # 3. Inyectamos la escala en el parámetro color
+                color=alt.Color('Tipo:N', scale=escala_colores_metas),
+                
                 xOffset='Tipo:N',
                 tooltip=[
                     alt.Tooltip('nombre_meta:N', title='Meta'), 
