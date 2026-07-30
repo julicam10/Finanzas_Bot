@@ -612,7 +612,7 @@ with pestana_metas:
             monto_obj = st.number_input("Monto Objetivo (COP)", min_value=0, value=0, step=100000, format="%d")
             monto_act = st.number_input("Monto Actual Ahorrado (COP)", min_value=0, value=0, step=50000, format="%d")
             
-        guardar_m = st.form_submit_button("Guardar Meta de Ahorro")
+        guardar_m = st.form_submit_button("Guardar meta de ahorro")
         if guardar_m and nombre_meta:
             estado_inicial_meta = 'Completada' if monto_act >= monto_obj and monto_obj > 0 else 'En curso'
             ejecutar_sql(
@@ -628,7 +628,7 @@ with pestana_metas:
         df_metas_filtradas = df_metas if ver_completadas_m else df_metas[df_metas['estado'] != 'Completada']
 
         if not df_metas_filtradas.empty:
-            st.markdown("### 📥 Registrar Ahorro / Sumar a Meta")
+            st.markdown("### 📥 Registrar nuevo ahorro a meta")
             with st.form("form_abono_meta", clear_on_submit=True):
                 col_am1, col_am2 = st.columns(2)
                 with col_am1:
@@ -657,23 +657,30 @@ with pestana_metas:
                     st.rerun()
 
             st.markdown("---")
-            st.subheader("📊 Progreso de Metas de Ahorro")
+            st.subheader("📊 Progreso de metas de ahorro")
             df_metas_melted = df_metas_filtradas.melt(id_vars=['nombre_meta'], value_vars=['monto_objetivo', 'monto_actual'],
-                                             var_name='Tipo', value_name='Monto')
+                                                     var_name='Tipo', value_name='Monto')
             df_metas_melted['Tipo'] = df_metas_melted['Tipo'].replace({
                 'monto_objetivo': 'Objetivo', 'monto_actual': 'Ahorrado Actual'
             })
             
             grafico_metas = alt.Chart(df_metas_melted).mark_bar().encode(
-                x=alt.X('nombre_meta:N', title='Meta'),
+                # 1. Agregamos labelAngle=0 para poner el texto 100% horizontal
+                x=alt.X('nombre_meta:N', title='Meta', axis=alt.Axis(labelAngle=0)),
                 y=alt.Y('Monto:Q', axis=alt.Axis(format=',.0f', title='COP')),
                 color='Tipo:N',
                 xOffset='Tipo:N',
-                tooltip=['nombre_meta', 'Tipo', alt.Tooltip('Monto:Q', format=',.0f')]
+                # 2. Asignamos el title='Meta' explícitamente en el tooltip
+                tooltip=[
+                    alt.Tooltip('nombre_meta:N', title='Meta'), 
+                    'Tipo', 
+                    alt.Tooltip('Monto:Q', format=',.0f')
+                ]
             ).properties(height=350)
+            
             st.altair_chart(grafico_metas, use_container_width=True)
 
-            st.markdown("### 🎯 Detalle de Metas de Ahorro")
+            st.markdown("### 🎯 Detalle de metas de ahorro")
             
             # --- 1. TABLA VISUAL DE METAS (Lectura con formato COP impecable) ---
             df_metas_mostrar = df_metas_filtradas.copy()
@@ -696,7 +703,7 @@ with pestana_metas:
             st.dataframe(df_metas_visual, use_container_width=True)
 
             # --- 2. PANEL DESPLEGABLE DE EDICIÓN (Metas) ---
-            with st.expander("✏️ Editar o Eliminar una Meta de Ahorro"):
+            with st.expander("✏️ Editar o eliminar una meta de ahorro"):
                 metas_lista = df_metas_filtradas['nombre_meta'].tolist()
                 meta_sel = st.selectbox("Selecciona la meta a modificar:", metas_lista, key="sel_meta_edit")
                 
@@ -718,7 +725,7 @@ with pestana_metas:
 
                     col_mb1, col_mb2 = st.columns(2)
                     with col_mb1:
-                        if st.button("Guardar Cambios en Meta", use_container_width=True):
+                        if st.button("Guardar Cambios", use_container_width=True):
                             # Control inteligente: Si el nuevo ahorro supera el objetivo, se marca completada sola
                             if nuevo_actual >= nuevo_objetivo:
                                 nuevo_estado = 'Completada'
@@ -743,7 +750,7 @@ with pestana_metas:
 
             # --- 3. TABLA VISUAL Y EDICIÓN DEL HISTORIAL DE ABONOS ---
             st.markdown("---")
-            st.markdown("### 📜 Historial de Ahorros a Metas")
+            st.markdown("### 📜 Historial abonos a metas")
             
             try:
                 df_log_metas = cargar_datos("SELECT * FROM log_abonos WHERE tipo = 'Meta' ORDER BY id DESC")
