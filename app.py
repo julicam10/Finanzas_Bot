@@ -666,7 +666,7 @@ with pestana_metas:
             
             grafico_metas = alt.Chart(df_metas_melted).mark_bar().encode(
                 # 1. Agregamos labelAngle=0 para poner el texto 100% horizontal
-                x=alt.X('nombre_meta:N', title='Meta', axis=alt.Axis(labelAngle=0)),
+                x=alt.X('nombre_meta:N', title='Meta', axis=alt.Axis(labelAngle=45)),
                 y=alt.Y('Monto:Q', axis=alt.Axis(format=',.0f', title='COP')),
                 color='Tipo:N',
                 xOffset='Tipo:N',
@@ -792,13 +792,15 @@ with pestana_metas:
                             
                         col_lb1, col_lb2 = st.columns(2)
                         with col_lb1:
-                            if st.button("Guardar Cambios en Historial", use_container_width=True):
+                            # Agregamos un 'key' único para que Streamlit no se confunda con otros botones
+                            if st.button("Guardar Cambios", use_container_width=True, key="btn_guardar_historial_metas"):
                                 query = "UPDATE log_abonos SET fecha = %s, referencia = %s, monto = %s WHERE id = %s"
                                 ejecutar_sql(query, (nueva_fecha_log, nueva_ref_log, float(nuevo_monto_log), int(id_seleccionado)))
                                 st.success("¡Historial actualizado!")
                                 st.rerun()
                         with col_lb2:
-                            if st.button("Eliminar Registro", type="primary", use_container_width=True):
+                            # Hacemos lo mismo para el botón de eliminar por precaución
+                            if st.button("Eliminar Registro", type="primary", use_container_width=True, key="btn_eliminar_historial_metas"):
                                 query = "DELETE FROM log_abonos WHERE id = %s"
                                 ejecutar_sql(query, (int(id_seleccionado),))
                                 st.warning("¡Registro eliminado!")
