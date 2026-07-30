@@ -929,7 +929,7 @@ with pestana_inversiones:
             grafico_inversiones = alt.Chart(df_inversiones).mark_arc(innerRadius=50).encode(
                 theta=alt.Theta(field="monto_invertido", type="quantitative"),
                 color=alt.Color(field="activo", type="nominal"),
-                tooltip=['Activo', alt.Tooltip('Monto_invertido:Q', format=',.0f')]
+                tooltip=['activo', alt.Tooltip('monto_invertido:Q', format=',.0f')]
             ).properties(height=300)
             st.altair_chart(grafico_inversiones, use_container_width=True)
     else:
