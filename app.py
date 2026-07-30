@@ -150,7 +150,7 @@ with pestana_trans:
                         
                     col_gb1, col_gb2 = st.columns(2)
                     with col_gb1:
-                        if st.button("Guardar Cambios en Gasto", use_container_width=True):
+                        if st.button("Guardar cambios", use_container_width=True, key="btn_guardar_cambios_transacciones"):
                             query = """
                                 UPDATE transacciones 
                                 SET fecha = %s, concepto = %s, categoria = %s, monto = %s, metodo_pago = %s 
@@ -161,7 +161,7 @@ with pestana_trans:
                             st.success("¡Transacción actualizada correctamente!")
                             st.rerun()
                     with col_gb2:
-                        if st.button("Eliminar Gasto", type="primary", use_container_width=True):
+                        if st.button("Eliminar Gasto", type="primary", use_container_width=True, key="btn_eliminar_gasto_transacciones"):
                             query = "DELETE FROM transacciones WHERE id = %s"
                             ejecutar_sql(query, (int(id_seleccionado_t),))
                             st.warning("¡Transacción eliminada!")
@@ -332,7 +332,7 @@ with pestana_presupuestos:
                     
                 col_pb1, col_pb2 = st.columns(2)
                 with col_pb1:
-                    if st.button("Guardar Cambios en Presupuesto", use_container_width=True):
+                    if st.button("Guardar Cambios en Presupuesto", use_container_width=True, key="btn_guardar_cambios_presupuestos"):
                         query = """
                             UPDATE presupuestos 
                             SET mes = %s, categoria = %s, tipo = %s, limite = %s 
@@ -343,7 +343,7 @@ with pestana_presupuestos:
                         st.success("¡Presupuesto actualizado correctamente!")
                         st.rerun()
                 with col_pb2:
-                    if st.button("Eliminar Presupuesto", type="primary", use_container_width=True):
+                    if st.button("Eliminar Presupuesto", type="primary", use_container_width=True, key="btn_eliminar_presupuesto"):
                         query = "DELETE FROM presupuestos WHERE id = %s"
                         ejecutar_sql(query, (int(id_seleccionado_p),))
                         st.warning("¡Presupuesto eliminado!")
@@ -514,7 +514,7 @@ with pestana_deudas:
                             
                         col_db1, col_db2 = st.columns(2)
                         with col_db1:
-                            if st.button("Guardar Cambios en Deuda", use_container_width=True):
+                            if st.button("Guardar Cambios en Deuda", use_container_width=True, key="btn_guardar_cambios_deudas"):
                                 # Recalcular matemáticamente el saldo pendiente
                                 nuevo_saldo = float(nuevo_inicial) - float(fila_sel['Abonado Acumulado (COP)'])
                                 nuevo_saldo = max(0, nuevo_saldo)
@@ -533,7 +533,7 @@ with pestana_deudas:
                                 st.success("¡Deuda actualizada!")
                                 st.rerun()
                         with col_db2:
-                            if st.button("Eliminar Deuda", type="primary", use_container_width=True):
+                            if st.button("Eliminar Deuda", type="primary", use_container_width=True, key="btn_eliminar_deuda"):
                                 query = "DELETE FROM deudas WHERE id = %s"
                                 ejecutar_sql(query, (int(fila_sel['id']),))
                                 st.warning("¡Deuda eliminada!")
@@ -666,7 +666,7 @@ with pestana_metas:
             
             grafico_metas = alt.Chart(df_metas_melted).mark_bar().encode(
                 # 1. Agregamos labelAngle=0 para poner el texto 100% horizontal
-                x=alt.X('nombre_meta:N', title='Meta', axis=alt.Axis(labelAngle=45)),
+                x=alt.X('nombre_meta:N', title='Meta', axis=alt.Axis(labelAngle=0)),
                 y=alt.Y('Monto:Q', axis=alt.Axis(format=',.0f', title='COP')),
                 color='Tipo:N',
                 xOffset='Tipo:N',
@@ -725,7 +725,7 @@ with pestana_metas:
 
                     col_mb1, col_mb2 = st.columns(2)
                     with col_mb1:
-                        if st.button("Guardar Cambios", use_container_width=True):
+                        if st.button("Guardar Cambios", use_container_width=True, key="guardar_cambios_metas"):
                             # Control inteligente: Si el nuevo ahorro supera el objetivo, se marca completada sola
                             if nuevo_actual >= nuevo_objetivo:
                                 nuevo_estado = 'Completada'
@@ -742,7 +742,7 @@ with pestana_metas:
                             
                     with col_mb2:
                         # Botón destructivo en rojo (type="primary" en temas oscuros/claros de Streamlit)
-                        if st.button("Eliminar Meta", type="primary", use_container_width=True):
+                        if st.button("Eliminar Meta", type="primary", use_container_width=True, key="btn_eliminar_metas"):
                             query = "DELETE FROM metas_ahorro WHERE id = %s"
                             ejecutar_sql(query, (int(fila_sel['id']),))
                             st.warning("¡Meta eliminada!")
@@ -901,14 +901,14 @@ with pestana_inversiones:
                     
                     col_b1, col_b2 = st.columns(2)
                     with col_b1:
-                        if st.button("Guardar Cambios", use_container_width=True):
+                        if st.button("Guardar Cambios", use_container_width=True, key="btn_guardar_cambios_inversiones"):
                             query = "UPDATE inversiones SET activo = %s, monto_invertido = %s WHERE id = %s"
                             ejecutar_sql(query, (nuevo_nombre_activo, float(nuevo_monto_activo), int(fila_sel['id'])))
                             st.success("¡Activo actualizado!")
                             st.rerun()
                             
                     with col_b2:
-                        if st.button("Eliminar Activo", type="primary", use_container_width=True):
+                        if st.button("Eliminar Activo", type="primary", use_container_width=True, key="btn_eliminar_activo"):
                             query = "DELETE FROM inversiones WHERE id = %s"
                             ejecutar_sql(query, (int(fila_sel['id']),))
                             st.warning("¡Activo eliminado!")
