@@ -36,7 +36,7 @@ def cargar_datos(query):
         return pd.DataFrame()
 
 st.title("📊 Centro de Comando Financiero")
-st.markdown("Monitoreo en vivo de tus transacciones, presupuestos, deudas y metas de ahorro.")
+st.markdown("Monitoreo en vivo de transacciones, presupuestos, deudas, metas de ahorro y patrimonio.")
 st.divider()
 
 # Cargar datos de la base de datos
@@ -830,18 +830,18 @@ with pestana_inversiones:
     with col_m2:
         st.metric(label="Total Invertido", value=f"$ {total_inversiones:,.0f}".replace(",", "."))
     with col_m3:
-        st.metric(label="Deudas Totales Pendientes", value=f"$ {total_deudas_pendientes:,.0f}".replace(",", "."))
+        st.metric(label="Deudas Totales (Pendientes)", value=f"$ {total_deudas_pendientes:,.0f}".replace(",", "."))
 
     st.markdown("---")
 
     # 2. Formulario para registrar o actualizar activos/inversiones
     with st.form("form_inversion", clear_on_submit=True):
-        st.markdown("**Registrar o actualizar valor de un activo / inversión**")
+        st.markdown("**Registrar o actualizar valor de un activo o una inversión**")
         col_i1, col_i2 = st.columns(2)
         with col_i1:
-            activo_input = st.text_input("Activo (Ej. S&P 500 VOO, TSMC)")
+            activo_input = st.text_input("Nombre del activo (Ej. S&P 500 VOO, TSMC)")
         with col_i2:
-            monto_inv_input = st.number_input("Monto Actual Invertido (COP)", min_value=0, value=0, step=50000, format="%d")
+            monto_inv_input = st.number_input("Monto actual invertido (COP)", min_value=0, value=0, step=50000, format="%d")
             
         guardar_inv = st.form_submit_button("Guardar Inversión")
         if guardar_inv and activo_input:
@@ -857,7 +857,7 @@ with pestana_inversiones:
 
     # 3. Visualización y Gráfico
     if not df_inversiones.empty:
-        st.subheader("📊 Distribución de tu Portafolio de Inversión")
+        st.subheader("📊 Distribución del Portafolio")
         
         col_g1, col_g2 = st.columns(2)
 
@@ -871,7 +871,7 @@ with pestana_inversiones:
             st.dataframe(df_inv_mostrar, use_container_width=True)
 
             # 2. PANEL DESPLEGABLE DE EDICIÓN
-            with st.expander("✏️ Editar o Eliminar un Activo Existente"):
+            with st.expander("✏️ Editar o eliminar un activo existente"):
                 activos_lista = df_inversiones['activo'].tolist()
                 activo_sel = st.selectbox("Selecciona el activo a modificar:", activos_lista)
                 
@@ -881,10 +881,10 @@ with pestana_inversiones:
                     
                     col_ed1, col_ed2 = st.columns(2)
                     with col_ed1:
-                        nuevo_nombre_activo = st.text_input("Nombre del Activo", value=fila_sel['activo'])
+                        nuevo_nombre_activo = st.text_input("Nombre del activo", value=fila_sel['activo'])
                     with col_ed2:
                         nuevo_monto_activo = st.number_input(
-                            "Monto Invertido (COP)", 
+                            "Monto invertido (COP)", 
                             value=int(fila_sel['monto_invertido']), 
                             step=50000, 
                             format="%d"
@@ -929,7 +929,7 @@ with pestana_inversiones:
             grafico_inversiones = alt.Chart(df_inversiones).mark_arc(innerRadius=50).encode(
                 theta=alt.Theta(field="monto_invertido", type="quantitative"),
                 color=alt.Color(field="activo", type="nominal"),
-                tooltip=['activo', alt.Tooltip('monto_invertido:Q', format=',.0f')]
+                tooltip=['Activo', alt.Tooltip('Monto_invertido:Q', format=',.0f')]
             ).properties(height=300)
             st.altair_chart(grafico_inversiones, use_container_width=True)
     else:
