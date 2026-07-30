@@ -904,33 +904,20 @@ with pestana_inversiones:
                             ejecutar_sql(query, (int(fila_sel['id']),))
                             st.warning("¡Activo eliminado!")
                             st.rerun()
-
-        # Botón para guardar los cambios
-        if st.button("Guardar Cambios en Portafolio"):
-            for index, fila in df_inversiones_editado.iterrows():
-                query = """
-                    UPDATE inversiones 
-                    SET fecha = %s, activo = %s, monto_invertido = %s 
-                    WHERE id = %s
-                """
-                # Aseguramos que el monto se vaya como float a la base de datos
-                params = (
-                    fila['fecha'], 
-                    fila['activo'], 
-                    float(fila['monto_invertido']), 
-                    fila['id']
-                )
-                ejecutar_sql(query, params)
-                
-            st.success("¡Portafolio actualizado con éxito!")
-            st.rerun()
             
         with col_g2:
             grafico_inversiones = alt.Chart(df_inversiones).mark_arc(innerRadius=50).encode(
                 theta=alt.Theta(field="monto_invertido", type="quantitative"),
-                color=alt.Color(field="activo", type="nominal"),
-                tooltip=['activo', alt.Tooltip('monto_invertido:Q', format=',.0f')]
+                # 1. Agregamos title="Activo" al color para arreglar el título de la leyenda
+                color=alt.Color(field="activo", type="nominal", title="Activo"),
+                
+                # 2. Reestructuramos el tooltip para darle un 'title' a cada variable
+                tooltip=[
+                    alt.Tooltip('activo:N', title="Activo"), 
+                    alt.Tooltip('monto_invertido:Q', title="Monto Invertido", format=',.0f')
+                ]
             ).properties(height=300)
+            
             st.altair_chart(grafico_inversiones, use_container_width=True)
     else:
         st.info("Aún no tienes inversiones registradas. Usa el formulario de arriba para agregar tu primer activo (ej. VOO o TSMC).")
