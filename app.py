@@ -665,12 +665,15 @@ with pestana_metas:
             })
             
             grafico_metas = alt.Chart(df_metas_melted).mark_bar().encode(
-                # 1. Agregamos labelAngle=0 para poner el texto 100% horizontal
-                x=alt.X('nombre_meta:N', title='Meta', axis=alt.Axis(labelAngle=0)),
+                # 1. labelAngle=0 mantiene el texto estrictamente horizontal
+                # 2. labelExpr="split(datum.value, ' ')" fuerza el salto de línea en cada espacio
+                x=alt.X('nombre_meta:N', title='Meta', axis=alt.Axis(
+                    labelAngle=0, 
+                    labelExpr="split(datum.value, ' ')"
+                )),
                 y=alt.Y('Monto:Q', axis=alt.Axis(format=',.0f', title='COP')),
                 color='Tipo:N',
                 xOffset='Tipo:N',
-                # 2. Asignamos el title='Meta' explícitamente en el tooltip
                 tooltip=[
                     alt.Tooltip('nombre_meta:N', title='Meta'), 
                     'Tipo', 
