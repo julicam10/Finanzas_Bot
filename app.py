@@ -283,18 +283,26 @@ with pestana_historial:
             range=['#155DFC', '#2AA63E', '#E1712B', '#E7180B'] 
         )
         
+        # Definimos tu escala de colores habitual para mantener la consistencia
+        escala_colores_categorias = alt.Scale(
+            domain=['Alma', 'Mercado', 'Gimnasio', 'Salidas a comer', 'Arriendo', 'Transporte', 'Otro'],
+            range=['#2AA63E', '#E1712B', '#E7180B', '#155DFC', '#8E44AD', '#1ABC9C', '#95A5A6']
+        )
+
         grafico_hist = alt.Chart(df_categoria_hist).mark_bar().encode(
-            # Mantenemos el orden de mayor a menor y aplicamos el texto horizontal con salto de línea
+            # Eje X con etiquetas horizontales y salto de línea integrado
             x=alt.X('Categoría:N', sort='-y', axis=alt.Axis(
                 labelAngle=0, 
-                labelExpr="split(datum.value, ' ')"
+                labelExpr="split(datum.value, ' ')",
+                title='Categoría'
             )),
+            # Eje Y con formato de montos
             y=alt.Y('Monto:Q', axis=alt.Axis(format=',.0f', title='Monto (COP)')),
             
-            # 2. Inyectamos la escala en el parámetro color
-            color=alt.Color('Categoría:N', scale=escala_colores_gastos, legend=None),
+            # Inyectamos el color por categoría con la misma escala consistente
+            color=alt.Color('Categoría:N', scale=escala_colores_categorias, legend=None),
             
-            # Estandarizamos el tooltip
+            # Tooltip estandarizado
             tooltip=[
                 alt.Tooltip('Categoría:N', title='Categoría'), 
                 alt.Tooltip('Monto:Q', title='Monto', format=',.0f')
