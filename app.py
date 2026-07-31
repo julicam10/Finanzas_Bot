@@ -363,14 +363,6 @@ with pestana_presupuestos:
             df_tipo_mostrar.columns = ['Tipo', 'Límite (COP)', '% del Total']
             st.dataframe(df_tipo_mostrar, use_container_width=True)
         with col_t2:
-            # 1. Definimos la escala de colores explícita
-            escala_colores = alt.Scale(
-                domain=['Inversión', 'Necesidad', 'Gasto General', 'Ahorro'], 
-                range=['#2AA63E', '#E1712B', '#E7180B','#155DFC']
-            )
-
-            # 2. Inyectamos la escala en el parámetro color
-            with col_t2:
             # 1. Definimos la escala de colores explícita 
             # (Cambia los códigos HEX por los colores que prefieras usar)
             escala_colores = alt.Scale(
