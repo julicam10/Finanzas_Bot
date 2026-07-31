@@ -102,8 +102,6 @@ with pestana_trans:
         """)
     # ---------------------------------------------
 
-    st.markdown("---")
-
     # --- PANEL DESPLEGABLE PARA REGISTRO MANUAL DE TRANSACCIONES ---
     with st.expander("➕ Registrar nueva transacción manual"):
         with st.form("form_transaccion_manual", clear_on_submit=True):
@@ -112,18 +110,18 @@ with pestana_trans:
             with col_m1:
                 # Fecha por defecto el día de hoy (puedes ajustarla si fue en otro momento)
                 from datetime import date
-                fecha_input = st.date_input("Fecha", value=date.today())
-                concepto_input = st.text_input("Concepto (Ej. Almuerzo, Uber, etc.)")
+                fecha_input = st.date_input("Fecha", value=date.today(), key="fecha_manual")
+                concepto_input = st.text_input("Concepto (Ej. Almuerzo, Uber, etc.)", key="concepto_manual")
                 
             with col_m2:
                 # Categorías habituales (puedes adaptarlas a las que usas en tus presupuestos)
-                categorias_opciones = ['Alma', 'Mercado', 'Gimnasio', 'Salidas a comer', 'Arriendo', 'Transporte', 'Otro']
-                categoria_input = st.selectbox("Categoría", categorias_opciones)
+                categorias_opciones = ['Inversion', 'Ahorro', 'Casa', 'Mercado', 'Comida fuera', 'Bienestar y cuidado', 'Mascota', 'Suscripciones', 'Servicios', 'Pago deudas', 'Gastos del mes']
+                categoria_input = st.selectbox("Categoría", categorias_opciones, key="categoria_manual")
                 
-                monto_input = st.number_input("Monto (COP)", min_value=0, value=0, step=10000, format="%d")
+                monto_input = st.number_input("Monto (COP)", min_value=0, value=0, step=10000, format="%d", key="monto_manual")
                 
             # Opciones comunes para el método de pago
-            metodo_pago_input = st.selectbox("Método de Pago", ['Transferencia', 'T.C. Bancolombia', 'T.C. Nu', 'Efectivo', 'Otro'])
+            metodo_pago_input = st.selectbox("Método de Pago", ['Transferencia', 'T.C. Bancolombia', 'T.C. Nu', 'Efectivo', 'Otro'], key="metodo_pago_manual")
             
             # Botón de envío del formulario
             guardar_transaccion = st.form_submit_button("Guardar Transacción", use_container_width=True)
