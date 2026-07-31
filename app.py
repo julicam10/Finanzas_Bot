@@ -385,57 +385,77 @@ with pestana_presupuestos:
 
         # --- 2. PANEL DESPLEGABLE DE EDICIÓN (Presupuestos) ---
         with st.expander("✏️ Editar o eliminar un presupuesto"):
-            # Construimos etiquetas únicas ocultando el ID visualmente
-            opciones_pres = []
-            for _, row in df_presupuestos.iterrows():
-                etiqueta = f"{row['mes']} | {row['categoria']} | $ {row['limite']:,.0f}".replace(",", ".")
-                opciones_pres.append((row['id'], etiqueta))
+        # Construimos etiquetas únicas ocultando el ID visualmente
+        opciones_pres = []
+        for _, row in df_presupuestos.iterrows():
+            etiqueta = f"{row['mes']} | {row['categoria']} | $ {row['limite']:,.0f}".replace(",", ".")
+            opciones_pres.append((row['id'], etiqueta))
+        
+        etiquetas_pres = [op[1] for op in opciones_pres]
+        
+        # Agregamos una opción por defecto para permitir limpiar la selección
+        etiquetas_opciones = ["-- Selecciona un presupuesto --"] + etiquetas_pres
+        
+        # Inicializamos el session_state si no existe
+        if "sel_presupuesto_edit" not in st.session_state:
+            st.session_state["sel_presupuesto_edit"] = "-- Selecciona un presupuesto --"
             
-            etiquetas_pres = [op[1] for op in opciones_pres]
-            pres_sel_etiqueta = st.selectbox("Selecciona el presupuesto a modificar:", etiquetas_pres, key="sel_presupuesto_edit")
+        pres_sel_etiqueta = st.selectbox(
+            "Selecciona el presupuesto a modificar:", 
+            etiquetas_opciones, 
+            key="sel_presupuesto_edit"
+        )
+        
+        if pres_sel_etiqueta and pres_sel_etiqueta != "-- Selecciona un presupuesto --":
+            # Extraemos el ID real a partir de la selección
+            id_seleccionado_p = next(op[0] for op in opciones_pres if op[1] == pres_sel_etiqueta)
+            fila_pres = df_presupuestos[df_presupuestos['id'] == id_seleccionado_p].iloc[0]
             
-            if pres_sel_etiqueta:
-                # Extraemos el ID real a partir de la selección
-                id_seleccionado_p = next(op[0] for op in opciones_pres if op[1] == pres_sel_etiqueta)
-                fila_pres = df_presupuestos[df_presupuestos['id'] == id_seleccionado_p].iloc[0]
+            col_p1, col_p2 = st.columns(2)
+            with col_p1:
+                nuevo_mes_p = st.text_input("Mes (YYYY-MM)", value=str(fila_pres['mes']), key="input_mes_presupuesto")
                 
-                col_p1, col_p2 = st.columns(2)
-                with col_p1:
-                    nuevo_mes_p = st.text_input("Mes (YYYY-MM)", value=str(fila_pres['mes']), key="input_mes_presupuesto")
-                    nueva_categoria_p = st.text_input("Categoría", value=fila_pres['categoria'], key="input_categoria_presupuesto")
+                # Forzamos que lea el valor real de la categoría desde la fila
+                categoria_actual_p = str(fila_pres['categoria'])
+                nueva_categoria_p = st.text_input("Categoría", value=categoria_actual_p, key="input_categoria_presupuesto")
+                
+                # --- NUEVO CAMPO CHECKBOX PARA EDICIÓN ---
+                valor_asignado_actual = bool(fila_pres['asignado']) if 'asignado' in fila_pres else False
+                nuevo_asignado_p = st.checkbox("¿Asignado en banco?", value=valor_asignado_actual, key="input_asignado_presupuesto")
+                
+            with col_p2:
+                # Opciones basadas en las que usas en tu gráfico
+                opciones_tipo = ['Inversión', 'Necesidad', 'Gasto General', 'Ahorro']
+                tipo_actual = fila_pres['tipo'] if fila_pres['tipo'] in opciones_tipo else 'Necesidad'
+                nuevo_tipo_p = st.selectbox("Tipo", opciones_tipo, index=opciones_tipo.index(tipo_actual), key="input_tipo_presupuesto")
+                
+                nuevo_limite_p = st.number_input("Límite (COP)", value=int(fila_pres['limite']), step=50000, format="%d", key="input_limite_presupuesto")
+                
+            col_pb1, col_pb2 = st.columns(2)
+            with col_pb1:
+                if st.button("Guardar Cambios en Presupuesto", use_container_width=True, key="btn_guardar_cambios_presupuestos"):
+                    # Actualizamos el Query para incluir la columna 'asignado'
+                    query = """
+                        UPDATE presupuestos 
+                        SET mes = %s, categoria = %s, tipo = %s, limite = %s, asignado = %s 
+                        WHERE id = %s
+                    """
+                    params = (nuevo_mes_p, nueva_categoria_p, nuevo_tipo_p, float(nuevo_limite_p), nuevo_asignado_p, int(id_seleccionado_p))
+                    ejecutar_sql(query, params)
+                    st.success("¡Presupuesto actualizado correctamente!")
                     
-                    # --- NUEVO CAMPO CHECKBOX PARA EDICIÓN ---
-                    # Leemos el valor actual de la BD, si no existe asume False
-                    valor_asignado_actual = bool(fila_pres['asignado']) if 'asignado' in fila_pres else False
-                    nuevo_asignado_p = st.checkbox("¿Asignado en banco?", value=valor_asignado_actual)
+                    # Limpiamos la selección y recargamos
+                    st.session_state["sel_presupuesto_edit"] = "-- Selecciona un presupuesto --"
+                    st.rerun()
+            with col_pb2:
+                if st.button("Eliminar Presupuesto", type="primary", use_container_width=True, key="btn_eliminar_presupuesto"):
+                    query = "DELETE FROM presupuestos WHERE id = %s"
+                    ejecutar_sql(query, (int(id_seleccionado_p),))
+                    st.warning("¡Presupuesto eliminado!")
                     
-                with col_p2:
-                    # Opciones basadas en las que usas en tu gráfico
-                    opciones_tipo = ['Inversión', 'Necesidad', 'Gasto General', 'Ahorro']
-                    tipo_actual = fila_pres['tipo'] if fila_pres['tipo'] in opciones_tipo else 'Necesidad'
-                    nuevo_tipo_p = st.selectbox("Tipo", opciones_tipo, index=opciones_tipo.index(tipo_actual))
-                    
-                    nuevo_limite_p = st.number_input("Límite (COP)", value=int(fila_pres['limite']), step=50000, format="%d")
-                    
-                col_pb1, col_pb2 = st.columns(2)
-                with col_pb1:
-                    if st.button("Guardar Cambios en Presupuesto", use_container_width=True, key="btn_guardar_cambios_presupuestos"):
-                        # Actualizamos el Query para incluir la columna 'asignado'
-                        query = """
-                            UPDATE presupuestos 
-                            SET mes = %s, categoria = %s, tipo = %s, limite = %s, asignado = %s 
-                            WHERE id = %s
-                        """
-                        params = (nuevo_mes_p, nueva_categoria_p, nuevo_tipo_p, float(nuevo_limite_p), nuevo_asignado_p, int(id_seleccionado_p))
-                        ejecutar_sql(query, params)
-                        st.success("¡Presupuesto actualizado correctamente!")
-                        st.rerun()
-                with col_pb2:
-                    if st.button("Eliminar Presupuesto", type="primary", use_container_width=True, key="btn_eliminar_presupuesto"):
-                        query = "DELETE FROM presupuestos WHERE id = %s"
-                        ejecutar_sql(query, (int(id_seleccionado_p),))
-                        st.warning("¡Presupuesto eliminado!")
-                        st.rerun()
+                    # Limpiamos la selección y recargamos
+                    st.session_state["sel_presupuesto_edit"] = "-- Selecciona un presupuesto --"
+                    st.rerun()
 
         # --- 3. GRÁFICA CIRCULAR Y RESUMEN (Intacto de tu código original) ---
         st.markdown("---")
