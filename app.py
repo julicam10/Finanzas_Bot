@@ -327,118 +327,118 @@ with pestana_presupuestos:
     st.markdown("---")
     st.subheader("📋 Detalle y edición de presupuestos")
         
-if not df_presupuestos.empty:
-    # --- 1. TABLA VISUAL DE LECTURA ---
-    df_pres_visual = df_presupuestos.copy()
-    
-    # Por seguridad, si la base de datos tarda en refrescar, aseguramos que la columna exista
-    if 'asignado' not in df_pres_visual.columns:
-        df_pres_visual['asignado'] = False
-    
-    # Aplicamos la capa de formato estético al límite
-    df_pres_visual['Límite'] = df_pres_visual['limite'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-    
-    # Renombramos, organizamos y ocultamos el ID
-    df_pres_visual = df_pres_visual[['mes', 'categoria', 'tipo', 'Límite', 'asignado']].rename(columns={
-        'mes': 'Mes', 
-        'categoria': 'Categoría', 
-        'tipo': 'Tipo',
-        'asignado': '¿Asignado en banco?'
-    })
-    
-    st.dataframe(df_pres_visual, use_container_width=True, hide_index=True)
+    if not df_presupuestos.empty:
+        # --- 1. TABLA VISUAL DE LECTURA ---
+        df_pres_visual = df_presupuestos.copy()
+        
+        # Por seguridad, si la base de datos tarda en refrescar, aseguramos que la columna exista
+        if 'asignado' not in df_pres_visual.columns:
+            df_pres_visual['asignado'] = False
+        
+        # Aplicamos la capa de formato estético al límite
+        df_pres_visual['Límite'] = df_pres_visual['limite'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+        
+        # Renombramos, organizamos y ocultamos el ID
+        df_pres_visual = df_pres_visual[['mes', 'categoria', 'tipo', 'Límite', 'asignado']].rename(columns={
+            'mes': 'Mes', 
+            'categoria': 'Categoría', 
+            'tipo': 'Tipo',
+            'asignado': '¿Asignado en banco?'
+        })
+        
+        st.dataframe(df_pres_visual, use_container_width=True, hide_index=True)
 
-    # --- 2. PANEL DESPLEGABLE DE EDICIÓN (Presupuestos) ---
-    with st.expander("✏️ Editar o eliminar un presupuesto"):
-        # Construimos etiquetas únicas ocultando el ID visualmente
-        opciones_pres = []
-        for _, row in df_presupuestos.iterrows():
-            etiqueta = f"{row['mes']} | {row['categoria']} | $ {row['limite']:,.0f}".replace(",", ".")
-            opciones_pres.append((row['id'], etiqueta))
-        
-        etiquetas_pres = [op[1] for op in opciones_pres]
-        pres_sel_etiqueta = st.selectbox("Selecciona el presupuesto a modificar:", etiquetas_pres, key="sel_presupuesto_edit")
-        
-        if pres_sel_etiqueta:
-            # Extraemos el ID real a partir de la selección
-            id_seleccionado_p = next(op[0] for op in opciones_pres if op[1] == pres_sel_etiqueta)
-            fila_pres = df_presupuestos[df_presupuestos['id'] == id_seleccionado_p].iloc[0]
+        # --- 2. PANEL DESPLEGABLE DE EDICIÓN (Presupuestos) ---
+        with st.expander("✏️ Editar o eliminar un presupuesto"):
+            # Construimos etiquetas únicas ocultando el ID visualmente
+            opciones_pres = []
+            for _, row in df_presupuestos.iterrows():
+                etiqueta = f"{row['mes']} | {row['categoria']} | $ {row['limite']:,.0f}".replace(",", ".")
+                opciones_pres.append((row['id'], etiqueta))
             
-            col_p1, col_p2 = st.columns(2)
-            with col_p1:
-                nuevo_mes_p = st.text_input("Mes (YYYY-MM)", value=str(fila_pres['mes']))
-                nueva_categoria_p = st.text_input("Categoría", value=fila_pres['categoria'])
-                
-                # --- NUEVO CAMPO CHECKBOX PARA EDICIÓN ---
-                # Leemos el valor actual de la BD, si no existe asume False
-                valor_asignado_actual = bool(fila_pres['asignado']) if 'asignado' in fila_pres else False
-                nuevo_asignado_p = st.checkbox("¿Asignado en banco?", value=valor_asignado_actual)
-                
-            with col_p2:
-                # Opciones basadas en las que usas en tu gráfico
-                opciones_tipo = ['Inversión', 'Necesidad', 'Gasto General', 'Ahorro']
-                tipo_actual = fila_pres['tipo'] if fila_pres['tipo'] in opciones_tipo else 'Necesidad'
-                nuevo_tipo_p = st.selectbox("Tipo", opciones_tipo, index=opciones_tipo.index(tipo_actual))
-                
-                nuevo_limite_p = st.number_input("Límite (COP)", value=int(fila_pres['limite']), step=50000, format="%d")
-                
-            col_pb1, col_pb2 = st.columns(2)
-            with col_pb1:
-                if st.button("Guardar Cambios en Presupuesto", use_container_width=True, key="btn_guardar_cambios_presupuestos"):
-                    # Actualizamos el Query para incluir la columna 'asignado'
-                    query = """
-                        UPDATE presupuestos 
-                        SET mes = %s, categoria = %s, tipo = %s, limite = %s, asignado = %s 
-                        WHERE id = %s
-                    """
-                    params = (nuevo_mes_p, nueva_categoria_p, nuevo_tipo_p, float(nuevo_limite_p), nuevo_asignado_p, int(id_seleccionado_p))
-                    ejecutar_sql(query, params)
-                    st.success("¡Presupuesto actualizado correctamente!")
-                    st.rerun()
-            with col_pb2:
-                if st.button("Eliminar Presupuesto", type="primary", use_container_width=True, key="btn_eliminar_presupuesto"):
-                    query = "DELETE FROM presupuestos WHERE id = %s"
-                    ejecutar_sql(query, (int(id_seleccionado_p),))
-                    st.warning("¡Presupuesto eliminado!")
-                    st.rerun()
-
-        # --- 3. GRÁFICA CIRCULAR Y RESUMEN (Intacto de tu código original) ---
-        st.markdown("---")
-        st.markdown("### 📊 Distribución de presupuesto")
-        df_tipo_resumen = df_presupuestos.groupby('tipo')['limite'].sum().reset_index()
-        df_tipo_resumen['Porcentaje'] = (df_tipo_resumen['limite'] / total_presupuestado) * 100 if total_presupuestado > 0 else 0
-        
-        col_t1, col_t2 = st.columns(2)
-        with col_t1:
-            df_tipo_mostrar = df_tipo_resumen.copy()
-            df_tipo_mostrar['Porcentaje'] = df_tipo_mostrar['Porcentaje'].apply(lambda x: f"{x:.2f}%")
-            df_tipo_mostrar['limite'] = df_tipo_mostrar['limite'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-            df_tipo_mostrar.columns = ['Tipo', 'Límite (COP)', '% del Total']
-            st.dataframe(df_tipo_mostrar, use_container_width=True)
-        with col_t2:
-            # 1. Definimos la escala de colores explícita 
-            # (Cambia los códigos HEX por los colores que prefieras usar)
-            escala_colores = alt.Scale(
-                domain=['Inversión', 'Necesidad', 'Gasto General', 'Ahorro'], 
-                range=['#2AA63E', '#E1712B', '#E7180B','#155DFC']
-            )
-
-            # 2. Inyectamos la escala en el parámetro color con los títulos ajustados
-            grafico_tipo = alt.Chart(df_tipo_resumen).mark_arc(innerRadius=50).encode(
-                theta=alt.Theta(field="limite", type="quantitative"),
-                
-                # Agregamos title="Tipo" y conectamos tu escala de colores
-                color=alt.Color(field="tipo", type="nominal", scale=escala_colores, title="Tipo"),
-                
-                # Reestructuramos el tooltip para enmascarar "tipo" y "limite"
-                tooltip=[
-                    alt.Tooltip('tipo:N', title="Tipo"), 
-                    alt.Tooltip('limite:Q', title="Límite", format=',.0f'), 
-                    alt.Tooltip('Porcentaje:Q', format='.2f')
-                ]
-            ).properties(height=250)
+            etiquetas_pres = [op[1] for op in opciones_pres]
+            pres_sel_etiqueta = st.selectbox("Selecciona el presupuesto a modificar:", etiquetas_pres, key="sel_presupuesto_edit")
             
-            st.altair_chart(grafico_tipo, use_container_width=True)
+            if pres_sel_etiqueta:
+                # Extraemos el ID real a partir de la selección
+                id_seleccionado_p = next(op[0] for op in opciones_pres if op[1] == pres_sel_etiqueta)
+                fila_pres = df_presupuestos[df_presupuestos['id'] == id_seleccionado_p].iloc[0]
+                
+                col_p1, col_p2 = st.columns(2)
+                with col_p1:
+                    nuevo_mes_p = st.text_input("Mes (YYYY-MM)", value=str(fila_pres['mes']))
+                    nueva_categoria_p = st.text_input("Categoría", value=fila_pres['categoria'])
+                    
+                    # --- NUEVO CAMPO CHECKBOX PARA EDICIÓN ---
+                    # Leemos el valor actual de la BD, si no existe asume False
+                    valor_asignado_actual = bool(fila_pres['asignado']) if 'asignado' in fila_pres else False
+                    nuevo_asignado_p = st.checkbox("¿Asignado en banco?", value=valor_asignado_actual)
+                    
+                with col_p2:
+                    # Opciones basadas en las que usas en tu gráfico
+                    opciones_tipo = ['Inversión', 'Necesidad', 'Gasto General', 'Ahorro']
+                    tipo_actual = fila_pres['tipo'] if fila_pres['tipo'] in opciones_tipo else 'Necesidad'
+                    nuevo_tipo_p = st.selectbox("Tipo", opciones_tipo, index=opciones_tipo.index(tipo_actual))
+                    
+                    nuevo_limite_p = st.number_input("Límite (COP)", value=int(fila_pres['limite']), step=50000, format="%d")
+                    
+                col_pb1, col_pb2 = st.columns(2)
+                with col_pb1:
+                    if st.button("Guardar Cambios en Presupuesto", use_container_width=True, key="btn_guardar_cambios_presupuestos"):
+                        # Actualizamos el Query para incluir la columna 'asignado'
+                        query = """
+                            UPDATE presupuestos 
+                            SET mes = %s, categoria = %s, tipo = %s, limite = %s, asignado = %s 
+                            WHERE id = %s
+                        """
+                        params = (nuevo_mes_p, nueva_categoria_p, nuevo_tipo_p, float(nuevo_limite_p), nuevo_asignado_p, int(id_seleccionado_p))
+                        ejecutar_sql(query, params)
+                        st.success("¡Presupuesto actualizado correctamente!")
+                        st.rerun()
+                with col_pb2:
+                    if st.button("Eliminar Presupuesto", type="primary", use_container_width=True, key="btn_eliminar_presupuesto"):
+                        query = "DELETE FROM presupuestos WHERE id = %s"
+                        ejecutar_sql(query, (int(id_seleccionado_p),))
+                        st.warning("¡Presupuesto eliminado!")
+                        st.rerun()
+
+            # --- 3. GRÁFICA CIRCULAR Y RESUMEN (Intacto de tu código original) ---
+            st.markdown("---")
+            st.markdown("### 📊 Distribución de presupuesto")
+            df_tipo_resumen = df_presupuestos.groupby('tipo')['limite'].sum().reset_index()
+            df_tipo_resumen['Porcentaje'] = (df_tipo_resumen['limite'] / total_presupuestado) * 100 if total_presupuestado > 0 else 0
+            
+            col_t1, col_t2 = st.columns(2)
+            with col_t1:
+                df_tipo_mostrar = df_tipo_resumen.copy()
+                df_tipo_mostrar['Porcentaje'] = df_tipo_mostrar['Porcentaje'].apply(lambda x: f"{x:.2f}%")
+                df_tipo_mostrar['limite'] = df_tipo_mostrar['limite'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+                df_tipo_mostrar.columns = ['Tipo', 'Límite (COP)', '% del Total']
+                st.dataframe(df_tipo_mostrar, use_container_width=True)
+            with col_t2:
+                # 1. Definimos la escala de colores explícita 
+                # (Cambia los códigos HEX por los colores que prefieras usar)
+                escala_colores = alt.Scale(
+                    domain=['Inversión', 'Necesidad', 'Gasto General', 'Ahorro'], 
+                    range=['#2AA63E', '#E1712B', '#E7180B','#155DFC']
+                )
+
+                # 2. Inyectamos la escala en el parámetro color con los títulos ajustados
+                grafico_tipo = alt.Chart(df_tipo_resumen).mark_arc(innerRadius=50).encode(
+                    theta=alt.Theta(field="limite", type="quantitative"),
+                    
+                    # Agregamos title="Tipo" y conectamos tu escala de colores
+                    color=alt.Color(field="tipo", type="nominal", scale=escala_colores, title="Tipo"),
+                    
+                    # Reestructuramos el tooltip para enmascarar "tipo" y "limite"
+                    tooltip=[
+                        alt.Tooltip('tipo:N', title="Tipo"), 
+                        alt.Tooltip('limite:Q', title="Límite", format=',.0f'), 
+                        alt.Tooltip('Porcentaje:Q', format='.2f')
+                    ]
+                ).properties(height=250)
+                
+                st.altair_chart(grafico_tipo, use_container_width=True)
             
     else:
     st.info("No hay presupuestos configurados todavía.")
