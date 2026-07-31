@@ -360,33 +360,24 @@ with pestana_presupuestos:
             st.rerun()
 
     st.markdown("---")
-    st.subheader("📋 Detalle y edición de presupuestos")
-        
+    # --- 1. VISUALIZACIÓN GENERAL DE PRESUPUESTOS (Gráficos y Tabla Consolidada) ---
+    st.subheader("📊 Consolidado de Presupuestos")
+    
+    # Asegúrate de que aquí vaya tu lógica para mostrar las tablas y gráficos de presupuestos
     if not df_presupuestos.empty:
-        # --- 1. TABLA VISUAL DE LECTURA ---
-        df_pres_visual = df_presupuestos.copy()
+        # Ejemplo de visualización de tus datos generales de presupuestos
+        st.dataframe(df_presupuestos, use_container_width=True)
         
-        # Por seguridad, si la base de datos tarda en refrescar, aseguramos que la columna exista
-        if 'asignado' not in df_pres_visual.columns:
-            df_pres_visual['asignado'] = False
-        
-        # Aplicamos la capa de formato estético al límite
-        df_pres_visual['Límite'] = df_pres_visual['limite'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-        
-        # Renombramos, organizamos y ocultamos el ID
-        df_pres_visual = df_pres_visual[['mes', 'categoria', 'tipo', 'Límite', 'asignado']].rename(columns={
-            'mes': 'Mes', 
-            'categoria': 'Categoría', 
-            'tipo': 'Tipo',
-            'asignado': '¿Asignado en banco?'
-        })
-        
-        st.dataframe(df_pres_visual, use_container_width=True, hide_index=True)
+        # (Aquí va tu gráfico de presupuestos si lo tienes estructurado en esta sección)
+    else:
+        st.info("No hay presupuestos registrados todavía.")
 
-    # --- 2. PANEL DESPLEGABLE DE EDICIÓN (Presupuestos) ---
+    st.markdown("---")
+
+    # --- 2. PANEL DESPLEGABLE DE EDICIÓN (Independiente para que no oculte los gráficos) ---
     with st.expander("✏️ Editar o eliminar un presupuesto"):
         
-        # 1. Aseguramos que la llave exista en la sesión antes de usarla
+        # Inicializamos el estado del selector si no existe
         if "sel_presupuesto_edit" not in st.session_state:
             st.session_state["sel_presupuesto_edit"] = "-- Selecciona un presupuesto --"
 
@@ -405,6 +396,7 @@ with pestana_presupuestos:
             key="sel_presupuesto_edit"
         )
         
+        # Solo si se selecciona un registro válido se despliegan los inputs de edición
         if pres_sel_etiqueta and pres_sel_etiqueta != "-- Selecciona un presupuesto --":
             # Extraemos el ID real a partir de la selección
             id_seleccionado_p = next(op[0] for op in opciones_pres if op[1] == pres_sel_etiqueta)
@@ -414,16 +406,15 @@ with pestana_presupuestos:
             with col_p1:
                 nuevo_mes_p = st.text_input("Mes (YYYY-MM)", value=str(fila_pres['mes']), key="input_mes_presupuesto")
                 
-                # Forzamos que lea el valor real de la categoría desde la fila
+                # Forzamos que lea el valor real de la categoría desde la base de datos
                 categoria_actual_p = str(fila_pres['categoria'])
                 nueva_categoria_p = st.text_input("Categoría", value=categoria_actual_p, key="input_categoria_presupuesto")
                 
-                # --- NUEVO CAMPO CHECKBOX PARA EDICIÓN ---
+                # Campo Checkbox
                 valor_asignado_actual = bool(fila_pres['asignado']) if 'asignado' in fila_pres else False
                 nuevo_asignado_p = st.checkbox("¿Asignado en banco?", value=valor_asignado_actual, key="input_asignado_presupuesto")
                 
             with col_p2:
-                # Opciones basadas en las que usas en tu gráfico
                 opciones_tipo = ['Inversión', 'Necesidad', 'Gasto General', 'Ahorro']
                 tipo_actual = fila_pres['tipo'] if fila_pres['tipo'] in opciones_tipo else 'Necesidad'
                 nuevo_tipo_p = st.selectbox("Tipo", opciones_tipo, index=opciones_tipo.index(tipo_actual), key="input_tipo_presupuesto")
@@ -442,16 +433,17 @@ with pestana_presupuestos:
                     ejecutar_sql(query, params)
                     st.success("¡Presupuesto actualizado correctamente!")
                     
-                    # Limpiamos la selección y recargamos
+                    # Limpiamos la selección para resetear el formulario
                     st.session_state["sel_presupuesto_edit"] = "-- Selecciona un presupuesto --"
                     st.rerun()
+                    
             with col_pb2:
                 if st.button("Eliminar Presupuesto", type="primary", use_container_width=True, key="btn_eliminar_presupuesto"):
                     query = "DELETE FROM presupuestos WHERE id = %s"
                     ejecutar_sql(query, (int(id_seleccionado_p),))
                     st.warning("¡Presupuesto eliminado!")
                     
-                    # Limpiamos la selección y recargamos
+                    # Limpiamos la selección para resetear el formulario
                     st.session_state["sel_presupuesto_edit"] = "-- Selecciona un presupuesto --"
                     st.rerun()
 
