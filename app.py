@@ -402,43 +402,44 @@ with pestana_presupuestos:
                         st.warning("¡Presupuesto eliminado!")
                         st.rerun()
 
-            # --- 3. GRÁFICA CIRCULAR Y RESUMEN (Intacto de tu código original) ---
-            st.markdown("---")
-            st.markdown("### 📊 Distribución de presupuesto")
-            df_tipo_resumen = df_presupuestos.groupby('tipo')['limite'].sum().reset_index()
-            df_tipo_resumen['Porcentaje'] = (df_tipo_resumen['limite'] / total_presupuestado) * 100 if total_presupuestado > 0 else 0
+        # --- 3. GRÁFICA CIRCULAR Y RESUMEN (Intacto de tu código original) ---
+        st.markdown("---")
+        st.markdown("### 📊 Distribución de presupuesto")
+        df_tipo_resumen = df_presupuestos.groupby('tipo')['limite'].sum().reset_index()
+        df_tipo_resumen['Porcentaje'] = (df_tipo_resumen['limite'] / total_presupuestado) * 100 if total_presupuestado > 0 else 0
             
-            col_t1, col_t2 = st.columns(2)
-            with col_t1:
-                df_tipo_mostrar = df_tipo_resumen.copy()
-                df_tipo_mostrar['Porcentaje'] = df_tipo_mostrar['Porcentaje'].apply(lambda x: f"{x:.2f}%")
-                df_tipo_mostrar['limite'] = df_tipo_mostrar['limite'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-                df_tipo_mostrar.columns = ['Tipo', 'Límite (COP)', '% del Total']
-                st.dataframe(df_tipo_mostrar, use_container_width=True)
-            with col_t2:
-                # 1. Definimos la escala de colores explícita 
-                # (Cambia los códigos HEX por los colores que prefieras usar)
-                escala_colores = alt.Scale(
-                    domain=['Inversión', 'Necesidad', 'Gasto General', 'Ahorro'], 
-                    range=['#2AA63E', '#E1712B', '#E7180B','#155DFC']
-                )
+        col_t1, col_t2 = st.columns(2)
+        with col_t1:
+            df_tipo_mostrar = df_tipo_resumen.copy()
+            df_tipo_mostrar['Porcentaje'] = df_tipo_mostrar['Porcentaje'].apply(lambda x: f"{x:.2f}%")
+            df_tipo_mostrar['limite'] = df_tipo_mostrar['limite'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+            df_tipo_mostrar.columns = ['Tipo', 'Límite (COP)', '% del Total']
+            st.dataframe(df_tipo_mostrar, use_container_width=True)
+        with col_t2:
+            # 1. Definimos la escala de colores explícita 
+            # (Cambia los códigos HEX por los colores que prefieras usar)
+            escala_colores = alt.Scale(
+                domain=['Inversión', 'Necesidad', 'Gasto General', 'Ahorro'], 
+                range=['#2AA63E', '#E1712B', '#E7180B','#155DFC']
+            )
 
-                # 2. Inyectamos la escala en el parámetro color con los títulos ajustados
-                grafico_tipo = alt.Chart(df_tipo_resumen).mark_arc(innerRadius=50).encode(
-                    theta=alt.Theta(field="limite", type="quantitative"),
-                    
-                    # Agregamos title="Tipo" y conectamos tu escala de colores
-                    color=alt.Color(field="tipo", type="nominal", scale=escala_colores, title="Tipo"),
-                    
-                    # Reestructuramos el tooltip para enmascarar "tipo" y "limite"
-                    tooltip=[
-                        alt.Tooltip('tipo:N', title="Tipo"), 
-                        alt.Tooltip('limite:Q', title="Límite", format=',.0f'), 
-                        alt.Tooltip('Porcentaje:Q', format='.2f')
-                    ]
-                ).properties(height=250)
+            # 2. Inyectamos la escala en el parámetro color con los títulos ajustados
+            grafico_tipo = alt.Chart(df_tipo_resumen).mark_arc(innerRadius=50).encode(
+                theta=alt.Theta(field="limite", type="quantitative"),
                 
-                st.altair_chart(grafico_tipo, use_container_width=True)
+                # Agregamos title="Tipo" y conectamos tu escala de colores
+                color=alt.Color(field="tipo", type="nominal", scale=escala_colores, title="Tipo"),
+                    
+                # Reestructuramos el tooltip para enmascarar "tipo" y "limite"
+                tooltip=[
+                    alt.Tooltip('tipo:N', title="Tipo"), 
+                    alt.Tooltip('limite:Q', title="Límite", format=',.0f'), 
+                    alt.Tooltip('Porcentaje:Q', format='.2f')
+                ]
+            ).properties(height=250)
+                
+            st.altair_chart(grafico_tipo, use_container_width=True)
+
     else:
         st.info("No hay presupuestos configurados todavía.")
 
