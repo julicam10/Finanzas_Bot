@@ -384,7 +384,12 @@ with pestana_presupuestos:
         st.dataframe(df_pres_visual, use_container_width=True, hide_index=True)
 
         # --- 2. PANEL DESPLEGABLE DE EDICIÓN (Presupuestos) ---
-        with st.expander("✏️ Editar o eliminar un presupuesto"):
+    with st.expander("✏️ Editar o eliminar un presupuesto"):
+        
+        # 1. Aseguramos que la llave exista en la sesión antes de usarla
+        if "sel_presupuesto_edit" not in st.session_state:
+            st.session_state["sel_presupuesto_edit"] = "-- Selecciona un presupuesto --"
+
         # Construimos etiquetas únicas ocultando el ID visualmente
         opciones_pres = []
         for _, row in df_presupuestos.iterrows():
@@ -392,14 +397,8 @@ with pestana_presupuestos:
             opciones_pres.append((row['id'], etiqueta))
         
         etiquetas_pres = [op[1] for op in opciones_pres]
-        
-        # Agregamos una opción por defecto para permitir limpiar la selección
         etiquetas_opciones = ["-- Selecciona un presupuesto --"] + etiquetas_pres
         
-        # Inicializamos el session_state si no existe
-        if "sel_presupuesto_edit" not in st.session_state:
-            st.session_state["sel_presupuesto_edit"] = "-- Selecciona un presupuesto --"
-            
         pres_sel_etiqueta = st.selectbox(
             "Selecciona el presupuesto a modificar:", 
             etiquetas_opciones, 
@@ -434,7 +433,6 @@ with pestana_presupuestos:
             col_pb1, col_pb2 = st.columns(2)
             with col_pb1:
                 if st.button("Guardar Cambios en Presupuesto", use_container_width=True, key="btn_guardar_cambios_presupuestos"):
-                    # Actualizamos el Query para incluir la columna 'asignado'
                     query = """
                         UPDATE presupuestos 
                         SET mes = %s, categoria = %s, tipo = %s, limite = %s, asignado = %s 
