@@ -345,7 +345,7 @@ with pestana_presupuestos:
     st.markdown("---")
     
     # =========================================================================
-    # 1. FORMULARIO DE NUEVO PRESUPUESTO Y EDICIÓN (ARRIBA)
+    # 1. FORMULARIO DE NUEVO PRESUPUESTO
     # =========================================================================
     with st.form("form_presupuesto", clear_on_submit=True):
         st.markdown("**Asignar presupuesto, categoría y clasificación**")
@@ -373,9 +373,15 @@ with pestana_presupuestos:
     st.markdown("---")
 
     # =========================================================================
-    # 2. PANEL DE EDICIÓN O ELIMINACIÓN DE REGISTROS
+    # 2. PANEL DE EDICIÓN O ELIMINACIÓN DE REGISTROS (ARRIBA)
     # =========================================================================
     with st.expander("✏️ Editar o eliminar un presupuesto"):
+        
+        # Limpieza de estado pendiente antes de instanciar el selectbox
+        if "limpiar_seleccion" in st.session_state and st.session_state["limpiar_seleccion"]:
+            st.session_state["sel_presupuesto_edit"] = "-- Selecciona un presupuesto --"
+            st.session_state["limpiar_seleccion"] = False
+
         if "sel_presupuesto_edit" not in st.session_state:
             st.session_state["sel_presupuesto_edit"] = "-- Selecciona un presupuesto --"
 
@@ -388,7 +394,7 @@ with pestana_presupuestos:
         etiquetas_opciones = ["-- Selecciona un presupuesto --"] + etiquetas_pres
         
         def actualizar_campos_edicion():
-            seleccion = st.session_state["sel_presupuesto_edit"]
+            seleccion = st.session_state.get("sel_presupuesto_edit", "-- Selecciona un presupuesto --")
             if seleccion and seleccion != "-- Selecciona un presupuesto --":
                 id_sel = next(op[0] for op in opciones_pres if op[1] == seleccion)
                 fila = df_presupuestos[df_presupuestos['id'] == id_sel].iloc[0]
@@ -447,8 +453,8 @@ with pestana_presupuestos:
                     ejecutar_sql(query, params)
                     st.success("¡Presupuesto actualizado correctamente!")
                     
-                    st.session_state["sel_presupuesto_edit"] = "-- Selecciona un presupuesto --"
-                    actualizar_campos_edicion()
+                    # Activamos la bandera para limpiar el selectbox de forma segura antes de renderizar
+                    st.session_state["limpiar_seleccion"] = True
                     st.rerun()
             with col_pb2:
                 if st.button("Eliminar Presupuesto", type="primary", use_container_width=True, key="btn_eliminar_presupuesto"):
@@ -456,14 +462,14 @@ with pestana_presupuestos:
                     ejecutar_sql(query, (int(id_seleccionado_p),))
                     st.warning("¡Presupuesto eliminado!")
                     
-                    st.session_state["sel_presupuesto_edit"] = "-- Selecciona un presupuesto --"
-                    actualizar_campos_edicion()
+                    # Activamos la bandera para limpiar el selectbox de forma segura antes de renderizar
+                    st.session_state["limpiar_seleccion"] = True
                     st.rerun()
 
     st.markdown("---")
 
     # =========================================================================
-    # 3. TABLA Y GRÁFICO CIRCULAR AL FINAL DE LA PESTAÑA
+    # 3. TABLA Y GRÁFICO CIRCULAR (AL FINAL DE LA PESTAÑA)
     # =========================================================================
     st.subheader("📊 Detalle y Gráfico Agrupado por Tipo")
     
@@ -489,7 +495,6 @@ with pestana_presupuestos:
         import pandas as pd
         import altair as alt
 
-        # Agrupamos los datos sumando los límites por cada tipo
         df_tipo_agrupado = df_presupuestos.groupby('tipo')['limite'].sum().reset_index()
 
         escala_colores_tipo = alt.Scale(
@@ -506,7 +511,6 @@ with pestana_presupuestos:
             ]
         )
 
-        # Diseño tipo Anillo (Donut) con el texto por fuera tal como se solicitó
         pie = base_circular.mark_arc(outerRadius=120, innerRadius=70)
         texto = base_circular.mark_text(radius=145, size=13).encode(
             text=alt.Text('limite:Q', format=',.0f')
