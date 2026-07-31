@@ -164,7 +164,7 @@ with pestana_trans:
             st.dataframe(df_trans_visual, use_container_width=True)
 
             # --- 2. PANEL DESPLEGABLE DE EDICIÓN (Transacciones) ---
-            with st.expander("✏️ Editar o Eliminar un Gasto"):
+            with st.expander("✏️ Editar o eliminar un gasto"):
                 # Construimos etiquetas únicas: ID | Fecha | Concepto | Monto
                 opciones_trans = []
                 for _, row in df_mes_actual.iterrows():
@@ -209,7 +209,7 @@ with pestana_trans:
             
             # --- 3. GRÁFICA INTACTA ---
             st.markdown("---")
-            st.subheader("Gastos por Categoría (Mes Actual)")
+            st.subheader("Gastos por categoría")
             df_categoria = df_mes_actual.groupby('categoria')['monto'].sum().reset_index()
             df_categoria.columns = ['Categoría', 'Monto']
             
@@ -406,8 +406,8 @@ with pestana_presupuestos:
                 
                 col_p1, col_p2 = st.columns(2)
                 with col_p1:
-                    nuevo_mes_p = st.text_input("Mes (YYYY-MM)", value=str(fila_pres['mes']))
-                    nueva_categoria_p = st.text_input("Categoría", value=fila_pres['categoria'])
+                    nuevo_mes_p = st.text_input("Mes (YYYY-MM)", value=str(fila_pres['mes'], key="input_mes_presupuesto"))
+                    nueva_categoria_p = st.text_input("Categoría", value=fila_pres['categoria'], key="input_categoria_presupuesto")
                     
                     # --- NUEVO CAMPO CHECKBOX PARA EDICIÓN ---
                     # Leemos el valor actual de la BD, si no existe asume False
