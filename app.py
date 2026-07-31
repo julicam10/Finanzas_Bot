@@ -308,7 +308,7 @@ with pestana_presupuestos:
     with st.sidebar:
         st.markdown("---")
         if st.button("🔄 Actualizar Datos Manualmente", use_container_width=True):
-            st.cache_data.clear() # Limpia cualquier caché de lectura si la usas
+            st.cache_data.clear()
             st.success("¡Datos actualizados!")
             st.rerun()
 
@@ -344,6 +344,9 @@ with pestana_presupuestos:
 
     st.markdown("---")
     
+    # =========================================================================
+    # 1. FORMULARIO DE NUEVO PRESUPUESTO Y EDICIÓN (ARRIBA)
+    # =========================================================================
     with st.form("form_presupuesto", clear_on_submit=True):
         st.markdown("**Asignar presupuesto, categoría y clasificación**")
         col_p1, col_p2 = st.columns(2)
@@ -370,74 +373,9 @@ with pestana_presupuestos:
     st.markdown("---")
 
     # =========================================================================
-    # PARTE 1: VISUALIZACIÓN GENERAL (Tabla y Gráfico Circular Agrupado por Tipo)
-    # =========================================================================
-    st.subheader("📊 Detalle y visualización de presupuestos")
-    
-    if not df_presupuestos.empty:
-        # --- TABLA VISUAL DE LECTURA ---
-        df_pres_visual = df_presupuestos.copy()
-        
-        if 'asignado' not in df_pres_visual.columns:
-            df_pres_visual['asignado'] = False
-        
-        df_pres_visual['Límite'] = df_pres_visual['limite'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-        
-        df_pres_visual = df_pres_visual[['mes', 'categoria', 'tipo', 'Límite', 'asignado']].rename(columns={
-            'mes': 'Mes', 
-            'categoria': 'Categoría', 
-            'tipo': 'Tipo',
-            'asignado': '¿Asignado en banco?'
-        })
-        
-        st.dataframe(df_pres_visual, use_container_width=True, hide_index=True)
-
-        # --- GRÁFICO CIRCULAR (DONUT) AGRUPADO POR TIPO ---
-        import altair as alt
-        import pandas as pd
-
-        # Agrupamos los datos por 'tipo' sumando sus límites
-        df_tipo_agrupado = df_presupuestos.groupby('tipo')['limite'].sum().reset_index()
-
-        escala_colores_tipo = alt.Scale(
-            domain=['Inversión', 'Necesidad', 'Gasto General', 'Ahorro'],
-            range=['#2AA63E', '#155DFC', '#E1712B', '#8E44AD']
-        )
-
-        base_circular = alt.Chart(df_tipo_agrupado).encode(
-            theta=alt.Theta(field="limite", type="quantitative", stack=True),
-            color=alt.Color(field="tipo", type="nominal", scale=escala_colores_tipo, title="Tipo de Presupuesto"),
-            tooltip=[
-                alt.Tooltip('tipo:N', title='Tipo'),
-                alt.Tooltip('limite:Q', title='Total Límite', format=',.0f')
-            ]
-        )
-
-        # Creamos el gráfico de tipo anillo (Donut)
-        pie = base_circular.mark_arc(outerRadius=120, innerRadius=70)
-        
-        # Agregamos texto con los porcentajes/valores encima del gráfico si se desea
-        texto = base_circular.mark_text(radius=140, size=13).encode(
-            text=alt.Text('limite:Q', format=',.0f')
-        )
-
-        grafico_circular = (pie + texto).properties(
-            title="Distribución de Presupuesto por Tipo",
-            height=350
-        )
-        
-        st.altair_chart(grafico_circular, use_container_width=True)
-
-    else:
-        st.info("No hay presupuestos configurados todavía.")
-
-    st.markdown("---")
-
-    # =========================================================================
-    # PARTE 2: PANEL DE EDICIÓN (Desplegable independiente con Session State)
+    # 2. PANEL DE EDICIÓN O ELIMINACIÓN DE REGISTROS
     # =========================================================================
     with st.expander("✏️ Editar o eliminar un presupuesto"):
-        
         if "sel_presupuesto_edit" not in st.session_state:
             st.session_state["sel_presupuesto_edit"] = "-- Selecciona un presupuesto --"
 
@@ -521,6 +459,68 @@ with pestana_presupuestos:
                     st.session_state["sel_presupuesto_edit"] = "-- Selecciona un presupuesto --"
                     actualizar_campos_edicion()
                     st.rerun()
+
+    st.markdown("---")
+
+    # =========================================================================
+    # 3. TABLA Y GRÁFICO CIRCULAR AL FINAL DE LA PESTAÑA
+    # =========================================================================
+    st.subheader("📊 Detalle y Gráfico Agrupado por Tipo")
+    
+    if not df_presupuestos.empty:
+        # Tabla de lectura
+        df_pres_visual = df_presupuestos.copy()
+        if 'asignado' not in df_pres_visual.columns:
+            df_pres_visual['asignado'] = False
+        
+        df_pres_visual['Límite'] = df_pres_visual['limite'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+        df_pres_visual = df_pres_visual[['mes', 'categoria', 'tipo', 'Límite', 'asignado']].rename(columns={
+            'mes': 'Mes', 
+            'categoria': 'Categoría', 
+            'tipo': 'Tipo',
+            'asignado': '¿Asignado en banco?'
+        })
+        
+        st.dataframe(df_pres_visual, use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+
+        # --- GRÁFICO CIRCULAR (TIPO DONUT) AGRUPADO POR TIPO ---
+        import pandas as pd
+        import altair as alt
+
+        # Agrupamos los datos sumando los límites por cada tipo
+        df_tipo_agrupado = df_presupuestos.groupby('tipo')['limite'].sum().reset_index()
+
+        escala_colores_tipo = alt.Scale(
+            domain=['Inversión', 'Necesidad', 'Gasto General', 'Ahorro'],
+            range=['#2AA63E', '#155DFC', '#E1712B', '#8E44AD']
+        )
+
+        base_circular = alt.Chart(df_tipo_agrupado).encode(
+            theta=alt.Theta(field="limite", type="quantitative", stack=True),
+            color=alt.Color(field="tipo", type="nominal", scale=escala_colores_tipo, title="Tipo de Presupuesto"),
+            tooltip=[
+                alt.Tooltip('tipo:N', title='Tipo'),
+                alt.Tooltip('limite:Q', title='Total Límite', format=',.0f')
+            ]
+        )
+
+        # Diseño tipo Anillo (Donut) con el texto por fuera tal como se solicitó
+        pie = base_circular.mark_arc(outerRadius=120, innerRadius=70)
+        texto = base_circular.mark_text(radius=145, size=13).encode(
+            text=alt.Text('limite:Q', format=',.0f')
+        )
+
+        grafico_circular = (pie + texto).properties(
+            title="Distribución de Presupuestos por Tipo",
+            height=400
+        )
+        
+        st.altair_chart(grafico_circular, use_container_width=True)
+
+    else:
+        st.info("No hay presupuestos configurados todavía.")
 
 with pestana_deudas:
     st.subheader("Control y Registro de Deudas")
