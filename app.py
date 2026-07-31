@@ -117,8 +117,8 @@ with pestana_trans:
             df_trans_visual['Monto'] = df_trans_visual['monto'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
             
             # Renombramos y organizamos para la presentación
-            df_trans_visual = df_trans_visual[['id', 'fecha', 'concepto', 'categoria', 'Monto', 'metodo_pago']].rename(columns={
-                'id': 'ID', 'fecha': 'Fecha', 'concepto': 'Concepto', 'categoria': 'Categoría', 'metodo_pago': 'Método de Pago'
+            df_trans_visual = df_trans_visual[['fecha', 'concepto', 'categoria', 'Monto', 'metodo_pago']].rename(columns={
+                'fecha': 'Fecha', 'concepto': 'Concepto', 'categoria': 'Categoría', 'metodo_pago': 'Método de Pago'
             })
             
             st.dataframe(df_trans_visual, use_container_width=True)
@@ -566,8 +566,8 @@ with pestana_deudas:
                 df_deudas_visual['Cuota Mensual'] = df_deudas_visual['cuota_mes'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
                 df_deudas_visual['Abonado Acumulado'] = df_deudas_visual['Abonado Acumulado (COP)'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
                 
-                df_deudas_visual = df_deudas_visual[['id', 'deuda', 'Monto Inicial', 'Saldo Pendiente', 'Cuota Mensual', 'estado', 'Abonado Acumulado']]
-                df_deudas_visual = df_deudas_visual.rename(columns={'id': 'ID', 'deuda': 'Deuda', 'estado': 'Estado'})
+                df_deudas_visual = df_deudas_visual[['deuda', 'Monto Inicial', 'Saldo Pendiente', 'Cuota Mensual', 'estado', 'Abonado Acumulado']]
+                df_deudas_visual = df_deudas_visual.rename(columns={'deuda': 'Deuda', 'estado': 'Estado'})
                 
                 st.dataframe(df_deudas_visual, use_container_width=True)
 
@@ -630,8 +630,8 @@ with pestana_deudas:
                 # Tabla Visual del Historial
                 df_log_deudas_visual = df_log_deudas.copy()
                 df_log_deudas_visual['Monto Abonado'] = df_log_deudas_visual['monto'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-                df_log_deudas_visual = df_log_deudas_visual[['id', 'fecha', 'referencia', 'Monto Abonado']].rename(columns={
-                    'id': 'ID', 'fecha': 'Fecha', 'referencia': 'Deuda'
+                df_log_deudas_visual = df_log_deudas_visual[['fecha', 'referencia', 'Monto Abonado']].rename(columns={
+                    'fecha': 'Fecha', 'referencia': 'Deuda'
                 })
                 st.dataframe(df_log_deudas_visual, use_container_width=True)
 
@@ -774,23 +774,23 @@ with pestana_metas:
             
             # --- 1. TABLA VISUAL DE METAS (Lectura con formato COP impecable) ---
             df_metas_mostrar = df_metas_filtradas.copy()
-            
+
             # Cálculos matemáticos previos
             df_metas_mostrar['Restante (COP)'] = df_metas_mostrar['monto_objetivo'] - df_metas_mostrar['monto_actual']
             df_metas_mostrar['Restante (COP)'] = df_metas_mostrar['Restante (COP)'].apply(lambda x: max(0, x))
             df_metas_mostrar['Progreso (%)'] = (df_metas_mostrar['monto_actual'] / df_metas_mostrar['monto_objetivo']) * 100
-            
+
             # Aplicamos la capa de formato estético (Puntos de mil y símbolo $)
             df_metas_mostrar['Monto Objetivo'] = df_metas_mostrar['monto_objetivo'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
             df_metas_mostrar['Ahorrado Actual'] = df_metas_mostrar['monto_actual'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
             df_metas_mostrar['Restante (COP)'] = df_metas_mostrar['Restante (COP)'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
             df_metas_mostrar['Progreso (%)'] = df_metas_mostrar['Progreso (%)'].apply(lambda x: f"{x:.2f}%")
-            
-            # Organizamos las columnas para presentarlas
-            df_metas_visual = df_metas_mostrar[['id', 'nombre_meta', 'Monto Objetivo', 'Ahorrado Actual', 'estrategia', 'estado', 'Restante (COP)', 'Progreso (%)']]
-            df_metas_visual = df_metas_visual.rename(columns={'id': 'ID', 'nombre_meta': 'Meta', 'estrategia': 'Estrategia', 'estado': 'Estado'})
-            
-            st.dataframe(df_metas_visual, use_container_width=True)
+
+            # Organizamos las columnas para presentarlas (SIN EL ID)
+            df_metas_visual = df_metas_mostrar[['nombre_meta', 'Monto Objetivo', 'Ahorrado Actual', 'estrategia', 'estado', 'Restante (COP)', 'Progreso (%)']]
+            df_metas_visual = df_metas_visual.rename(columns={'nombre_meta': 'Meta', 'estrategia': 'Estrategia', 'estado': 'Estado'})
+
+            st.dataframe(df_metas_visual, use_container_width=True, hide_index=True)
 
             # --- 2. PANEL DESPLEGABLE DE EDICIÓN (Metas) ---
             with st.expander("✏️ Editar o eliminar una meta de ahorro"):
@@ -851,10 +851,14 @@ with pestana_metas:
                 # Tabla Visual Historial
                 df_log_metas_visual = df_log_metas.copy()
                 df_log_metas_visual['Monto Abonado'] = df_log_metas_visual['monto'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-                df_log_metas_visual = df_log_metas_visual[['id', 'fecha', 'referencia', 'Monto Abonado']].rename(columns={
-                    'id': 'ID', 'fecha': 'Fecha', 'referencia': 'Meta'
+                
+                # Seleccionamos y renombramos sin incluir el ID
+                df_log_metas_visual = df_log_metas_visual[['fecha', 'referencia', 'Monto Abonado']].rename(columns={
+                    'fecha': 'Fecha', 
+                    'referencia': 'Meta'
                 })
-                st.dataframe(df_log_metas_visual, use_container_width=True)
+                
+                st.dataframe(df_log_metas_visual, use_container_width=True, hide_index=True)
 
                 # Panel de Edición Historial
                 with st.expander("✏️ Editar o Eliminar un Abono del Historial"):
@@ -964,10 +968,15 @@ with pestana_inversiones:
             # 1. TABLA VISUAL DE LECTURA (Con formato COP impecable)
             df_inv_mostrar = df_inversiones.copy()
             df_inv_mostrar['monto_invertido'] = df_inv_mostrar['monto_invertido'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-            df_inv_mostrar = df_inv_mostrar.rename(columns={
-                'id': 'ID', 'fecha': 'Fecha Registro', 'activo': 'Activo', 'monto_invertido': 'Monto Invertido (COP)'
+            
+            # Seleccionamos y renombramos únicamente las columnas que queremos mostrar (sin el ID)
+            df_inv_mostrar = df_inv_mostrar[['fecha', 'activo', 'monto_invertido']].rename(columns={
+                'fecha': 'Fecha Registro', 
+                'activo': 'Activo', 
+                'monto_invertido': 'Monto Invertido (COP)'
             })
-            st.dataframe(df_inv_mostrar, use_container_width=True)
+            
+            st.dataframe(df_inv_mostrar, use_container_width=True, hide_index=True)
 
             # 2. PANEL DESPLEGABLE DE EDICIÓN
             with st.expander("✏️ Editar o eliminar un activo existente"):
