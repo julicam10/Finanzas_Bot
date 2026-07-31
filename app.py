@@ -206,8 +206,28 @@ with pestana_historial:
         st.markdown("---")
         
         # 2. Tabla de transacciones
-        st.markdown(f"### Detalle de Transacciones ({mes_seleccionado})")
-        st.dataframe(df_mes_historial, use_container_width=True, hide_index=True)
+        st.markdown(f"### Detalle de transacciones ({mes_seleccionado})")
+        
+        # 1. Validamos que haya datos para mostrar
+        if not df_mes_historial.empty:
+            df_historial_visual = df_mes_historial.copy()
+            
+            # 2. Aplicamos el formato de moneda (COP)
+            df_historial_visual['monto'] = df_historial_visual['monto'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+            
+            # 3. Excluimos la columna 'id' y renombramos el resto
+            df_historial_visual = df_historial_visual[['fecha', 'concepto', 'categoria', 'monto', 'metodo_pago']].rename(columns={
+                'fecha': 'Fecha', 
+                'concepto': 'Concepto', 
+                'categoria': 'Categoría', 
+                'monto': 'Monto', 
+                'metodo_pago': 'Método de Pago'
+            })
+            
+            # 4. Imprimimos la tabla visual sin el índice
+            st.dataframe(df_historial_visual, use_container_width=True, hide_index=True)
+        else:
+            st.info("No hay transacciones registradas para este mes.")
         
         st.markdown("---")
         
