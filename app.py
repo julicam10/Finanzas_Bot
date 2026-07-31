@@ -406,7 +406,7 @@ with pestana_presupuestos:
                 
                 col_p1, col_p2 = st.columns(2)
                 with col_p1:
-                    nuevo_mes_p = st.text_input("Mes (YYYY-MM)", value=str(fila_pres['mes'], key="input_mes_presupuesto"))
+                    nuevo_mes_p = st.text_input("Mes (YYYY-MM)", value=str(fila_pres['mes']), key="input_mes_presupuesto")
                     nueva_categoria_p = st.text_input("Categoría", value=fila_pres['categoria'], key="input_categoria_presupuesto")
                     
                     # --- NUEVO CAMPO CHECKBOX PARA EDICIÓN ---
