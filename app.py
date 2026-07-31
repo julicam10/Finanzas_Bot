@@ -440,8 +440,8 @@ if not df_presupuestos.empty:
             
             st.altair_chart(grafico_tipo, use_container_width=True)
             
-        else:
-        st.info("No hay presupuestos configurados todavía.")
+    else:
+    st.info("No hay presupuestos configurados todavía.")
 
 with pestana_deudas:
     st.subheader("Control y Registro de Deudas")
