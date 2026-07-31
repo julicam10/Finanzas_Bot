@@ -276,34 +276,20 @@ with pestana_historial:
         df_categoria_hist = df_mes_historial.groupby('categoria')['monto'].sum().reset_index()
         df_categoria_hist.columns = ['Categoría', 'Monto']
         
-        # 1. Definimos la escala de colores explícita 
-        # (Añade todas tus categorías en 'domain' y un color HEX para cada una en 'range')
-        escala_colores_gastos = alt.Scale(
-            domain=['Ahorro', 'Alimentación', 'Transporte', 'Entretenimiento'], 
-            range=['#155DFC', '#2AA63E', '#E1712B', '#E7180B'] 
-        )
-        
-        # Definimos tu escala de colores habitual para mantener la consistencia
+        # Definición segura de escala de colores
         escala_colores_categorias = alt.Scale(
-            domain=['Alma', 'Mercado', 'Gimnasio', 'Salidas a comer', 'Arriendo', 'Transporte', 'Otro'],
-            range=['#2AA63E', '#E1712B', '#E7180B', '#155DFC', '#8E44AD', '#1ABC9C', '#95A5A6']
+            domain=['Inversion', 'Ahorro', 'Casa', 'Mercado', 'Comida fuera', 'Bienestar y cuidado', 'Mascota', 'Suscripciones', 'Servicios', 'Pago deudas', 'Gastos del mes'],
+            range=['#2AA63E', '#E1712B', '#E7180B', '#155DFC', '#8E44AD', '#1ABC9C', '#95A5A6', '#95A5A6', '#95A5A6', '#95A5A6', '#95A5A6']
         )
 
         grafico_hist = alt.Chart(df_categoria_hist).mark_bar().encode(
-            # Eje X con etiquetas horizontales y salto de línea integrado
             x=alt.X('Categoría:N', sort='-y', axis=alt.Axis(
-                labelAngle=0,
-                labelOverlap=False,
-                labelExpr="split(datum.value, ' ')",
+                labelAngle=0,         # Forzar ángulo horizontal estricto
+                labelOverlap=False,   # Evitar que se solapen o roten automáticas
                 title='Categoría'
             )),
-            # Eje Y con formato de montos
             y=alt.Y('Monto:Q', axis=alt.Axis(format=',.0f', title='Monto (COP)')),
-            
-            # Inyectamos el color por categoría con la misma escala consistente
             color=alt.Color('Categoría:N', scale=escala_colores_categorias, legend=None),
-            
-            # Tooltip estandarizado
             tooltip=[
                 alt.Tooltip('Categoría:N', title='Categoría'), 
                 alt.Tooltip('Monto:Q', title='Monto', format=',.0f')
