@@ -76,7 +76,7 @@ pestana_trans, pestana_historial, pestana_presupuestos, pestana_deudas, pestana_
     "📅 Historial de gastos",
     "🎯 Presupuestos", 
     "💳 Deudas", 
-    "💰 Metas de Ahorro",
+    "💰 Ahorro",
     "💎 Patrimonio & Inversiones"
 ])
 
@@ -286,7 +286,7 @@ with pestana_presupuestos:
             st.rerun()
 
     st.markdown("---")
-    st.subheader("📋 Detalle y Edición de Tus Presupuestos")
+    st.subheader("📋 Detalle y edición de presupuestos")
     
     if not df_presupuestos.empty:
         # --- 1. TABLA VISUAL DE LECTURA (Formato COP impecable) ---
@@ -303,7 +303,7 @@ with pestana_presupuestos:
         st.dataframe(df_pres_visual, use_container_width=True)
 
         # --- 2. PANEL DESPLEGABLE DE EDICIÓN (Presupuestos) ---
-        with st.expander("✏️ Editar o Eliminar un Presupuesto"):
+        with st.expander("✏️ Editar o eliminar un presupuesto"):
             # Construimos etiquetas únicas usando Mes + Categoría + Monto para identificarlos fácilmente
             opciones_pres = []
             for _, row in df_presupuestos.iterrows():
@@ -351,7 +351,7 @@ with pestana_presupuestos:
 
         # --- 3. GRÁFICA CIRCULAR Y RESUMEN (Intacto de tu código original) ---
         st.markdown("---")
-        st.markdown("### 📊 Distribución por Tipo de Gasto / Inversión")
+        st.markdown("### 📊 Distribución de presupuesto")
         df_tipo_resumen = df_presupuestos.groupby('tipo')['limite'].sum().reset_index()
         df_tipo_resumen['Porcentaje'] = (df_tipo_resumen['limite'] / total_presupuestado) * 100 if total_presupuestado > 0 else 0
         
@@ -370,10 +370,27 @@ with pestana_presupuestos:
             )
 
             # 2. Inyectamos la escala en el parámetro color
+            with col_t2:
+            # 1. Definimos la escala de colores explícita 
+            # (Cambia los códigos HEX por los colores que prefieras usar)
+            escala_colores = alt.Scale(
+                domain=['Inversión', 'Necesidad', 'Gasto General', 'Ahorro'], 
+                range=['#2AA63E', '#E1712B', '#E7180B','#155DFC']
+            )
+
+            # 2. Inyectamos la escala en el parámetro color con los títulos ajustados
             grafico_tipo = alt.Chart(df_tipo_resumen).mark_arc(innerRadius=50).encode(
                 theta=alt.Theta(field="limite", type="quantitative"),
-                color=alt.Color(field="tipo", type="nominal", scale=escala_colores),
-                tooltip=['tipo', alt.Tooltip('limite:Q', format=',.0f'), alt.Tooltip('Porcentaje:Q', format='.2f')]
+                
+                # Agregamos title="Tipo" y conectamos tu escala de colores
+                color=alt.Color(field="tipo", type="nominal", scale=escala_colores, title="Tipo"),
+                
+                # Reestructuramos el tooltip para enmascarar "tipo" y "limite"
+                tooltip=[
+                    alt.Tooltip('tipo:N', title="Tipo"), 
+                    alt.Tooltip('limite:Q', title="Límite", format=',.0f'), 
+                    alt.Tooltip('Porcentaje:Q', format='.2f')
+                ]
             ).properties(height=250)
             
             st.altair_chart(grafico_tipo, use_container_width=True)
@@ -433,7 +450,7 @@ with pestana_deudas:
                     st.rerun()
 
             st.markdown("---")
-            st.subheader("📊 Progreso de abonos a deudas)")
+            st.subheader("📊 Progreso de abonos a deudas")
             
             df_deudas_melted = df_deudas_filtradas.melt(id_vars=['deuda'], value_vars=['monto_inicial', 'monto_total'],
                                                         var_name='Concepto', value_name='Monto')
