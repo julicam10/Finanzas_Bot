@@ -304,6 +304,14 @@ with pestana_historial:
 with pestana_presupuestos:
     st.subheader("Gestión de Presupuestos")
 
+    # --- BOTÓN DE ACTUALIZACIÓN MANUAL EN LA BARRA LATERAL ---
+    with st.sidebar:
+        st.markdown("---")
+        if st.button("🔄 Actualizar Datos Manualmente", use_container_width=True):
+            st.cache_data.clear() # Limpia cualquier caché de lectura si la usas
+            st.success("¡Datos actualizados!")
+            st.rerun()
+
     # --- Guía de categorías desplegable ---
     with st.expander("💡 Ver categorías del bot y palabras clave (Haz clic para desplegar)"):
         st.markdown("""
@@ -362,7 +370,7 @@ with pestana_presupuestos:
     st.markdown("---")
 
     # =========================================================================
-    # PARTE 1: VISUALIZACIÓN GENERAL (Tabla y Gráfico visibles al abrir)
+    # PARTE 1: VISUALIZACIÓN GENERAL (Tabla y Gráfico Circular Agrupado por Tipo)
     # =========================================================================
     st.subheader("📊 Detalle y visualización de presupuestos")
     
@@ -384,27 +392,41 @@ with pestana_presupuestos:
         
         st.dataframe(df_pres_visual, use_container_width=True, hide_index=True)
 
-        # --- GRÁFICO DE DISTRIBUCIÓN DE PRESUPUESTOS ---
+        # --- GRÁFICO CIRCULAR (DONUT) AGRUPADO POR TIPO ---
         import altair as alt
-        
+        import pandas as pd
+
+        # Agrupamos los datos por 'tipo' sumando sus límites
+        df_tipo_agrupado = df_presupuestos.groupby('tipo')['limite'].sum().reset_index()
+
         escala_colores_tipo = alt.Scale(
             domain=['Inversión', 'Necesidad', 'Gasto General', 'Ahorro'],
             range=['#2AA63E', '#155DFC', '#E1712B', '#8E44AD']
         )
-        
-        grafico_presupuestos = alt.Chart(df_presupuestos).mark_bar().encode(
-            x=alt.X('categoria:N', sort='-y', axis=alt.Axis(labelAngle=0, labelOverlap=False, title='Categoría')),
-            y=alt.Y('limite:Q', axis=alt.Axis(format=',.0f', title='Límite (COP)')),
-            color=alt.Color('tipo:N', scale=escala_colores_tipo, title='Tipo'),
+
+        base_circular = alt.Chart(df_tipo_agrupado).encode(
+            theta=alt.Theta(field="limite", type="quantitative", stack=True),
+            color=alt.Color(field="tipo", type="nominal", scale=escala_colores_tipo, title="Tipo de Presupuesto"),
             tooltip=[
-                alt.Tooltip('mes:N', title='Mes'),
-                alt.Tooltip('categoria:N', title='Categoría'),
                 alt.Tooltip('tipo:N', title='Tipo'),
-                alt.Tooltip('limite:Q', title='Límite', format=',.0f')
+                alt.Tooltip('limite:Q', title='Total Límite', format=',.0f')
             ]
-        ).properties(height=350)
+        )
+
+        # Creamos el gráfico de tipo anillo (Donut)
+        pie = base_circular.mark_arc(outerRadius=120, innerRadius=70)
         
-        st.altair_chart(grafico_presupuestos, use_container_width=True)
+        # Agregamos texto con los porcentajes/valores encima del gráfico si se desea
+        texto = base_circular.mark_text(radius=140, size=13).encode(
+            text=alt.Text('limite:Q', format=',.0f')
+        )
+
+        grafico_circular = (pie + texto).properties(
+            title="Distribución de Presupuesto por Tipo",
+            height=350
+        )
+        
+        st.altair_chart(grafico_circular, use_container_width=True)
 
     else:
         st.info("No hay presupuestos configurados todavía.")
@@ -412,7 +434,7 @@ with pestana_presupuestos:
     st.markdown("---")
 
     # =========================================================================
-    # PARTE 2: PANEL DE EDICIÓN (Desplegable independiente)
+    # PARTE 2: PANEL DE EDICIÓN (Desplegable independiente con Session State)
     # =========================================================================
     with st.expander("✏️ Editar o eliminar un presupuesto"):
         
@@ -464,7 +486,6 @@ with pestana_presupuestos:
             
             col_p1, col_p2 = st.columns(2)
             with col_p1:
-                # Omitimos el parámetro value= explícito para que el widget tome en tiempo real el valor del session_state del callback
                 nuevo_mes_p = st.text_input("Mes (YYYY-MM)", value=st.session_state.get("edit_mes_val", ""), key="input_mes_presupuesto")
                 nueva_categoria_p = st.text_input("Categoría", value=st.session_state.get("edit_cat_val", ""), key="input_categoria_presupuesto")
                 nuevo_asignado_p = st.checkbox("¿Asignado en banco?", value=st.session_state.get("edit_asig_val", False), key="input_asignado_presupuesto")
