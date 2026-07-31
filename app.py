@@ -292,7 +292,8 @@ with pestana_historial:
         grafico_hist = alt.Chart(df_categoria_hist).mark_bar().encode(
             # Eje X con etiquetas horizontales y salto de línea integrado
             x=alt.X('Categoría:N', sort='-y', axis=alt.Axis(
-                labelAngle=0, 
+                labelAngle=0,
+                labelOverlap=False,
                 labelExpr="split(datum.value, ' ')",
                 title='Categoría'
             )),
