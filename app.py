@@ -237,11 +237,21 @@ with pestana_historial:
         df_categoria_hist.columns = ['Categoría', 'Monto']
         
         grafico_hist = alt.Chart(df_categoria_hist).mark_bar().encode(
-            x=alt.X('Categoría:N', sort='-y'),
+            # 1. Mantenemos el orden de mayor a menor y aplicamos el texto horizontal con salto de línea
+            x=alt.X('Categoría:N', sort='-y', axis=alt.Axis(
+                labelAngle=0, 
+                labelExpr="split(datum.value, ' ')"
+            )),
             y=alt.Y('Monto:Q', axis=alt.Axis(format=',.0f', title='Monto (COP)')),
             color=alt.Color('Categoría:N', legend=None),
-            tooltip=['Categoría:N', alt.Tooltip('Monto:Q', format=',.0f')]
+            
+            # 2. Estandarizamos el tooltip
+            tooltip=[
+                alt.Tooltip('Categoría:N', title='Categoría'), 
+                alt.Tooltip('Monto:Q', title='Monto', format=',.0f')
+            ]
         ).properties(height=350)
+        
         st.altair_chart(grafico_hist, use_container_width=True)
         
     else:
