@@ -304,7 +304,7 @@ with pestana_historial:
 with pestana_presupuestos:
     st.subheader("Gestión de Presupuestos")
 
-    # --- NUEVO: Guía de categorías desplegable ---
+    # --- Guía de categorías desplegable ---
     with st.expander("💡 Ver categorías del bot y palabras clave (Haz clic para desplegar)"):
         st.markdown("""
         **Usa los nombres principales (en negrita) al crear tu presupuesto.** El bot clasificará automáticamente los gastos si usas las palabras clave asociadas:
@@ -321,11 +321,10 @@ with pestana_presupuestos:
         * **Pago deudas**: crédito hipotecario, credito hipotecario, pago ipad, t.c nu, t.c bancolombia
         * **Gastos del mes**: salida con amigos, transporte, pasaje, cine, salida *(Esta es también la categoría por defecto)*
         """)
-    # ---------------------------------------------
     
     col_sal1, col_sal2, col_sal3 = st.columns(3)
     with col_sal1:
-        salario_mes = st.number_input("Ingreso / Salario del Mes (COP)", min_value=0, value=6427740, step=100000, format="%d")
+        salario_mes = st.number_input("Ingreso / Salario del Mes (COP)", min_value=0, value=6427740, step=100000, format="%d", key="input_salario_presupuesto")
     
     total_presupuestado = df_presupuestos['limite'].sum() if not df_presupuestos.empty else 0
     disponible_por_asignar = salario_mes - total_presupuestado
@@ -341,14 +340,15 @@ with pestana_presupuestos:
         st.markdown("**Asignar presupuesto, categoría y clasificación**")
         col_p1, col_p2 = st.columns(2)
         with col_p1:
-            mes_input = st.text_input("Mes (Ej. 2026-07)", value="2026-07")
-            cat_input = st.text_input("Categoría (Ej. Mercado, VOO, Arriendo)")
+            mes_input = st.text_input("Mes (Ej. 2026-07)", value="2026-07", key="nuevo_mes_presupuesto")
+            cat_input = st.text_input("Categoría (Ej. Mercado, VOO, Arriendo)", key="nueva_cat_presupuesto")
         with col_p2:
             tipo_input = st.selectbox(
                 "Tipo de Presupuesto", 
-                ["Necesidad", "Ahorro", "Inversión", "Gasto General"]
+                ["Necesidad", "Ahorro", "Inversión", "Gasto General"],
+                key="nuevo_tipo_presupuesto"
             )
-            limite_input = st.number_input("Límite Presupuestado (COP)", min_value=0, value=0, step=50000, format="%d")
+            limite_input = st.number_input("Límite Presupuestado (COP)", min_value=0, value=0, step=50000, format="%d", key="nuevo_limite_presupuesto")
             
         guardar_p = st.form_submit_button("Guardar Presupuesto")
         if guardar_p and cat_input:
@@ -362,23 +362,19 @@ with pestana_presupuestos:
     st.markdown("---")
 
     # =========================================================================
-    # PARTE 1: VISUALIZACIÓN GENERAL (Tabla y Gráfico que se ven al abrir)
+    # PARTE 1: VISUALIZACIÓN GENERAL (Tabla y Gráfico visibles al abrir)
     # =========================================================================
-
-    st.subheader("📊 Detalle y edición de presupuestos")
+    st.subheader("📊 Detalle y visualización de presupuestos")
     
     if not df_presupuestos.empty:
         # --- TABLA VISUAL DE LECTURA ---
         df_pres_visual = df_presupuestos.copy()
         
-        # Por seguridad aseguramos la columna 'asignado'
         if 'asignado' not in df_pres_visual.columns:
             df_pres_visual['asignado'] = False
         
-        # Formato estético del límite
         df_pres_visual['Límite'] = df_pres_visual['limite'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
         
-        # Renombramos y organizamos
         df_pres_visual = df_pres_visual[['mes', 'categoria', 'tipo', 'Límite', 'asignado']].rename(columns={
             'mes': 'Mes', 
             'categoria': 'Categoría', 
@@ -388,9 +384,27 @@ with pestana_presupuestos:
         
         st.dataframe(df_pres_visual, use_container_width=True, hide_index=True)
 
-        # --- AQUÍ VA TU GRÁFICO (Asegúrate de tener tu gráfico de presupuestos aquí abajo) ---
-        # Si tienes tu código de Altair para la distribución o resumen de presupuestos, colócalo aquí:
-        # ej: st.altair_chart(tu_grafico_presupuestos, use_container_width=True)
+        # --- GRÁFICO DE DISTRIBUCIÓN DE PRESUPUESTOS ---
+        import altair as alt
+        
+        escala_colores_tipo = alt.Scale(
+            domain=['Inversión', 'Necesidad', 'Gasto General', 'Ahorro'],
+            range=['#2AA63E', '#155DFC', '#E1712B', '#8E44AD']
+        )
+        
+        grafico_presupuestos = alt.Chart(df_presupuestos).mark_bar().encode(
+            x=alt.X('categoria:N', sort='-y', axis=alt.Axis(labelAngle=0, labelOverlap=False, title='Categoría')),
+            y=alt.Y('limite:Q', axis=alt.Axis(format=',.0f', title='Límite (COP)')),
+            color=alt.Color('tipo:N', scale=escala_colores_tipo, title='Tipo'),
+            tooltip=[
+                alt.Tooltip('mes:N', title='Mes'),
+                alt.Tooltip('categoria:N', title='Categoría'),
+                alt.Tooltip('tipo:N', title='Tipo'),
+                alt.Tooltip('limite:Q', title='Límite', format=',.0f')
+            ]
+        ).properties(height=350)
+        
+        st.altair_chart(grafico_presupuestos, use_container_width=True)
 
     else:
         st.info("No hay presupuestos configurados todavía.")
@@ -402,11 +416,9 @@ with pestana_presupuestos:
     # =========================================================================
     with st.expander("✏️ Editar o eliminar un presupuesto"):
         
-        # Inicializamos el estado del selector si no existe
         if "sel_presupuesto_edit" not in st.session_state:
             st.session_state["sel_presupuesto_edit"] = "-- Selecciona un presupuesto --"
 
-        # Construimos etiquetas únicas
         opciones_pres = []
         for _, row in df_presupuestos.iterrows():
             etiqueta = f"{row['mes']} | {row['categoria']} | $ {row['limite']:,.0f}".replace(",", ".")
@@ -415,7 +427,6 @@ with pestana_presupuestos:
         etiquetas_pres = [op[1] for op in opciones_pres]
         etiquetas_opciones = ["-- Selecciona un presupuesto --"] + etiquetas_pres
         
-        # Callback para refrescar los valores en tiempo real al cambiar de selección
         def actualizar_campos_edicion():
             seleccion = st.session_state["sel_presupuesto_edit"]
             if seleccion and seleccion != "-- Selecciona un presupuesto --":
@@ -441,7 +452,6 @@ with pestana_presupuestos:
             on_change=actualizar_campos_edicion
         )
         
-        # Inicializamos valores por defecto si no existen
         if "edit_cat_val" not in st.session_state:
             st.session_state["edit_cat_val"] = ""
         if "edit_mes_val" not in st.session_state:
@@ -449,12 +459,12 @@ with pestana_presupuestos:
         if "edit_lim_val" not in st.session_state:
             st.session_state["edit_lim_val"] = 0
 
-        # Se muestran los inputs de edición solo si se selecciona un elemento válido
         if pres_sel_etiqueta and pres_sel_etiqueta != "-- Selecciona un presupuesto --":
             id_seleccionado_p = next(op[0] for op in opciones_pres if op[1] == pres_sel_etiqueta)
             
             col_p1, col_p2 = st.columns(2)
             with col_p1:
+                # Omitimos el parámetro value= explícito para que el widget tome en tiempo real el valor del session_state del callback
                 nuevo_mes_p = st.text_input("Mes (YYYY-MM)", value=st.session_state.get("edit_mes_val", ""), key="input_mes_presupuesto")
                 nueva_categoria_p = st.text_input("Categoría", value=st.session_state.get("edit_cat_val", ""), key="input_categoria_presupuesto")
                 nuevo_asignado_p = st.checkbox("¿Asignado en banco?", value=st.session_state.get("edit_asig_val", False), key="input_asignado_presupuesto")
@@ -478,7 +488,6 @@ with pestana_presupuestos:
                     ejecutar_sql(query, params)
                     st.success("¡Presupuesto actualizado correctamente!")
                     
-                    # Limpiamos y recargamos
                     st.session_state["sel_presupuesto_edit"] = "-- Selecciona un presupuesto --"
                     actualizar_campos_edicion()
                     st.rerun()
@@ -488,7 +497,6 @@ with pestana_presupuestos:
                     ejecutar_sql(query, (int(id_seleccionado_p),))
                     st.warning("¡Presupuesto eliminado!")
                     
-                    # Limpiamos y recargamos
                     st.session_state["sel_presupuesto_edit"] = "-- Selecciona un presupuesto --"
                     actualizar_campos_edicion()
                     st.rerun()
