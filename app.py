@@ -102,46 +102,48 @@ with pestana_trans:
         """)
     # ---------------------------------------------
 
+    st.markdown("---")
+
     # --- PANEL DESPLEGABLE PARA REGISTRO MANUAL DE TRANSACCIONES ---
     with st.expander("➕ Registrar nueva transacción manual"):
-    with st.form("form_transaccion_manual", clear_on_submit=True):
-        col_m1, col_m2 = st.columns(2)
-        
-        with col_m1:
-            # Fecha por defecto el día de hoy (puedes ajustarla si fue en otro momento)
-            from datetime import date
-            fecha_input = st.date_input("Fecha", value=date.today())
-            concepto_input = st.text_input("Concepto (Ej. Almuerzo, Uber, etc.)")
+        with st.form("form_transaccion_manual", clear_on_submit=True):
+            col_m1, col_m2 = st.columns(2)
             
-        with col_m2:
-            # Categorías habituales (puedes adaptarlas a las que usas en tus presupuestos)
-            categorias_opciones = ['Alma', 'Mercado', 'Gimnasio', 'Salidas a comer', 'Arriendo', 'Transporte', 'Otro']
-            categoria_input = st.selectbox("Categoría", categorias_opciones)
-            
-            monto_input = st.number_input("Monto (COP)", min_value=0, value=0, step=10000, format="%d")
-            
-        # Opciones comunes para el método de pago
-        metodo_pago_input = st.selectbox("Método de Pago", ['Transferencia', 'T.C. Bancolombia', 'T.C. Nu', 'Efectivo', 'Otro'])
-        
-        # Botón de envío del formulario
-        guardar_transaccion = st.form_submit_button("Guardar Transacción", use_container_width=True)
-        
-        if guardar_transaccion:
-            if concepto_input and monto_input > 0:
-                # Asegúrate de que el nombre de tu tabla en la base de datos sea el correcto (ej. 'transacciones' o 'gastos')
-                query = """
-                    INSERT INTO transacciones (fecha, concepto, categoria, monto, metodo_pago) 
-                    VALUES (%s, %s, %s, %s, %s)
-                """
-                # Formateamos la fecha a string YYYY-MM-DD para SQL
-                params = (str(fecha_input), concepto_input, categoria_input, float(monto_input), metodo_pago_input)
+            with col_m1:
+                # Fecha por defecto el día de hoy (puedes ajustarla si fue en otro momento)
+                from datetime import date
+                fecha_input = st.date_input("Fecha", value=date.today())
+                concepto_input = st.text_input("Concepto (Ej. Almuerzo, Uber, etc.)")
                 
-                ejecutar_sql(query, params)
-                st.success(f"¡Transacción de '{concepto_input}' guardada exitosamente!")
-                st.rerun()
-            else:
-                st.warning("Por favor ingresa un concepto válido y un monto mayor a cero.")
-    
+            with col_m2:
+                # Categorías habituales (puedes adaptarlas a las que usas en tus presupuestos)
+                categorias_opciones = ['Alma', 'Mercado', 'Gimnasio', 'Salidas a comer', 'Arriendo', 'Transporte', 'Otro']
+                categoria_input = st.selectbox("Categoría", categorias_opciones)
+                
+                monto_input = st.number_input("Monto (COP)", min_value=0, value=0, step=10000, format="%d")
+                
+            # Opciones comunes para el método de pago
+            metodo_pago_input = st.selectbox("Método de Pago", ['Transferencia', 'T.C. Bancolombia', 'T.C. Nu', 'Efectivo', 'Otro'])
+            
+            # Botón de envío del formulario
+            guardar_transaccion = st.form_submit_button("Guardar Transacción", use_container_width=True)
+            
+            if guardar_transaccion:
+                if concepto_input and monto_input > 0:
+                    # Asegúrate de que el nombre de tu tabla en la base de datos sea el correcto (ej. 'transacciones' o 'gastos')
+                    query = """
+                        INSERT INTO transacciones (fecha, concepto, categoria, monto, metodo_pago) 
+                        VALUES (%s, %s, %s, %s, %s)
+                    """
+                    # Formateamos la fecha a string YYYY-MM-DD para SQL
+                    params = (str(fecha_input), concepto_input, categoria_input, float(monto_input), metodo_pago_input)
+                    
+                    ejecutar_sql(query, params)
+                    st.success(f"¡Transacción de '{concepto_input}' guardada exitosamente!")
+                    st.rerun()
+                else:
+                    st.warning("Por favor ingresa un concepto válido y un monto mayor a cero.")
+        
     if not df_transacciones.empty:
         # 1. Obtener el mes actual (Ej. "2026-07")
         mes_actual = datetime.now().strftime("%Y-%m")
