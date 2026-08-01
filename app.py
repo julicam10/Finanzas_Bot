@@ -181,12 +181,12 @@ with pestana_trans:
                     
                     col_g1, col_g2 = st.columns(2)
                     with col_g1:
-                        nueva_fecha_t = st.text_input("Fecha (YYYY-MM-DD)", value=str(fila_trans['fecha']))
-                        nuevo_concepto_t = st.text_input("Concepto", value=fila_trans['concepto'])
-                        nueva_categoria_t = st.text_input("Categoría", value=fila_trans['categoria'])
+                        nueva_fecha_t = st.text_input("Fecha (YYYY-MM-DD)", key="input_nueva_fecha_pestana_transacciones", value=str(fila_trans['fecha']))
+                        nuevo_concepto_t = st.text_input("Concepto", key="input_nuevo_concepto_pestana_transacciones", value=fila_trans['concepto'])
+                        nueva_categoria_t = st.text_input("Categoría", key="input_nueva_categoria_pestana_transacciones", value=fila_trans['categoria'])
                     with col_g2:
                         nuevo_monto_t = st.number_input("Monto (COP)", value=int(fila_trans['monto']), step=10000, format="%d")
-                        nuevo_metodo_t = st.text_input("Método de Pago", value=fila_trans['metodo_pago'])
+                        nuevo_metodo_t = st.text_input("Método de Pago", key="input_nuevo_metodo_pago_pestana_transacciones", value=fila_trans['metodo_pago'])
                         
                     col_gb1, col_gb2 = st.columns(2)
                     with col_gb1:
@@ -533,7 +533,7 @@ with pestana_deudas:
         st.markdown("**Registrar nueva deuda activa**")
         col_d1, col_d2 = st.columns(2)
         with col_d1:
-            deuda_input = st.text_input("Deuda (Ej. T.C. Bancolombia, Curso de inglés)")
+            deuda_input = st.text_input("Deuda (Ej. T.C. Bancolombia, Curso de inglés)", key="input_deuda_pestana_deudas")
             estado_deuda = st.selectbox("Estado inicial", ["Pendiente", "Completada"])
         with col_d2:
             monto_total_deuda = st.number_input("Monto Total Inicial (COP)", min_value=0, value=0, step=50000, format="%d")
@@ -664,7 +664,7 @@ with pestana_deudas:
                         
                         col_d1, col_d2, col_d3 = st.columns(3)
                         with col_d1:
-                            nueva_deuda = st.text_input("Nombre de la Deuda", value=fila_sel['deuda'])
+                            nueva_deuda = st.text_input("Nombre de la Deuda", value=fila_sel['deuda'], key="input_nueva_deuda_pestana_deudas")
                             opciones_estado_d = ['Pendiente', 'Completada']
                             estado_actual_d = fila_sel['estado'] if fila_sel['estado'] in opciones_estado_d else 'Pendiente'
                             nuevo_estado_d = st.selectbox("Estado", opciones_estado_d, index=opciones_estado_d.index(estado_actual_d))
@@ -767,8 +767,8 @@ with pestana_metas:
         st.markdown("**Registrar nueva meta de ahorro**")
         col_m1, col_m2 = st.columns(2)
         with col_m1:
-            nombre_meta = st.text_input("Nombre de la Meta (Ej. Viaje a Europa)")
-            estrategia_meta = st.text_input("Estrategia / Plataforma (Ej. Cajitas Nu)")
+            nombre_meta = st.text_input("Nombre de la Meta (Ej. Viaje a Europa)", key="input_meta_pestana_metas")
+            estrategia_meta = st.text_input("Estrategia / Plataforma (Ej. Cajitas Nu)", key="input_estrategia_pestana_metas")
         with col_m2:
             monto_obj = st.number_input("Monto Objetivo (COP)", min_value=0, value=0, step=100000, format="%d")
             monto_act = st.number_input("Monto Actual Ahorrado (COP)", min_value=0, value=0, step=50000, format="%d")
@@ -886,8 +886,8 @@ with pestana_metas:
                     
                     col_m1, col_m2, col_m3 = st.columns(3)
                     with col_m1:
-                        nuevo_nombre = st.text_input("Nombre de la Meta", value=fila_sel['nombre_meta'])
-                        nueva_estrategia = st.text_input("Estrategia", value=fila_sel['estrategia'])
+                        nuevo_nombre = st.text_input("Nombre de la Meta", value=fila_sel['nombre_meta'], key="input_nueva_meta_pestana_metas")
+                        nueva_estrategia = st.text_input("Estrategia", value=fila_sel['estrategia'], key="input_nueva_estrategia_pestana_metas")
                     with col_m2:
                         nuevo_objetivo = st.number_input("Monto Objetivo (COP)", value=int(fila_sel['monto_objetivo']), step=100000, format="%d")
                         nuevo_actual = st.number_input("Ahorrado Actual (COP)", value=int(fila_sel['monto_actual']), step=50000, format="%d")
@@ -961,9 +961,9 @@ with pestana_metas:
                         
                         col_l1, col_l2, col_l3 = st.columns(3)
                         with col_l1:
-                            nueva_fecha_log = st.text_input("Fecha (YYYY-MM-DD)", value=str(fila_log['fecha']))
+                            nueva_fecha_log = st.text_input("Fecha (YYYY-MM-DD)", value=str(fila_log['fecha']), key="input_nueva_fecha_pestana_metas")
                         with col_l2:
-                            nueva_ref_log = st.text_input("Referencia (Meta)", value=fila_log['referencia'])
+                            nueva_ref_log = st.text_input("Referencia (Meta)", value=fila_log['referencia'], key="input_nueva_referencia_meta_pestana_metas")
                         with col_l3:
                             nuevo_monto_log = st.number_input("Monto Abonado (COP)", value=int(fila_log['monto']), step=50000, format="%d")
                             
@@ -1025,7 +1025,7 @@ with pestana_inversiones:
         st.markdown("**Registrar o actualizar valor de un activo o una inversión**")
         col_i1, col_i2 = st.columns(2)
         with col_i1:
-            activo_input = st.text_input("Nombre del activo (Ej. S&P 500 VOO, TSMC)")
+            activo_input = st.text_input("Nombre del activo (Ej. S&P 500 VOO, TSMC)", key="input_activo_pestana_patrimonio")
         with col_i2:
             monto_inv_input = st.number_input("Monto actual invertido (COP)", min_value=0, value=0, step=50000, format="%d")
             
@@ -1072,7 +1072,7 @@ with pestana_inversiones:
                     
                     col_ed1, col_ed2 = st.columns(2)
                     with col_ed1:
-                        nuevo_nombre_activo = st.text_input("Nombre del activo", value=fila_sel['activo'])
+                        nuevo_nombre_activo = st.text_input("Nombre del activo", value=fila_sel['activo'], key="input_nombre_activo_pestana_metas")
                     with col_ed2:
                         nuevo_monto_activo = st.number_input(
                             "Monto invertido (COP)", 
