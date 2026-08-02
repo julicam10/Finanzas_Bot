@@ -304,6 +304,9 @@ with pestana_historial:
 with pestana_presupuestos:
     st.subheader("Gestión de Presupuestos")
 
+    # Lista estandarizada de opciones para ubicación del dinero
+    opciones_ubicacion = ["Nu", "Bancolombia", "Efectivo", "No aplica", "Otro"]
+
     # --- BOTÓN DE ACTUALIZACIÓN MANUAL EN LA BARRA LATERAL ---
     with st.sidebar:
         st.markdown("---")
@@ -348,11 +351,12 @@ with pestana_presupuestos:
     # 1. FORMULARIO DE NUEVO PRESUPUESTO
     # =========================================================================
     with st.form("form_presupuesto", clear_on_submit=True):
-        st.markdown("**Asignar presupuesto, categoría y clasificación**")
+        st.markdown("**Asignar presupuesto, categoría, clasificación y ubicación**")
         col_p1, col_p2 = st.columns(2)
         with col_p1:
             mes_input = st.text_input("Mes (Ej. 2026-07)", value="2026-07", key="nuevo_mes_presupuesto")
             cat_input = st.text_input("Categoría (Ej. Mercado, VOO, Arriendo)", key="nueva_cat_presupuesto")
+            ubicacion_input = st.selectbox("Ubicación del Dinero", opciones_ubicacion, key="nueva_ubicacion_presupuesto")
         with col_p2:
             tipo_input = st.selectbox(
                 "Tipo de Presupuesto", 
@@ -364,8 +368,8 @@ with pestana_presupuestos:
         guardar_p = st.form_submit_button("Guardar Presupuesto")
         if guardar_p and cat_input:
             ejecutar_sql(
-                "INSERT INTO presupuestos (mes, categoria, tipo, limite) VALUES (%s, %s, %s, %s)",
-                (mes_input, cat_input.capitalize(), tipo_input, limite_input)
+                "INSERT INTO presupuestos (mes, categoria, tipo, limite, ubicacion) VALUES (%s, %s, %s, %s, %s)",
+                (mes_input, cat_input.capitalize(), tipo_input, limite_input, ubicacion_input)
             )
             st.success(f"¡Presupuesto para {cat_input} guardado exitosamente!")
             st.rerun()
@@ -373,7 +377,7 @@ with pestana_presupuestos:
     st.markdown("---")
 
     # =========================================================================
-    # 2. PANEL DE EDICIÓN O ELIMINACIÓN DE REGISTROS (ARRIBA)
+    # 2. PANEL DE EDICIÓN O ELIMINACIÓN DE REGISTROS
     # =========================================================================
     with st.expander("✏️ Editar o eliminar un presupuesto"):
         
@@ -387,7 +391,8 @@ with pestana_presupuestos:
 
         opciones_pres = []
         for _, row in df_presupuestos.iterrows():
-            etiqueta = f"{row['mes']} | {row['categoria']} | $ {row['limite']:,.0f}".replace(",", ".")
+            ubi_txt = f" | {row['ubicacion']}" if 'ubicacion' in row and row['ubicacion'] else ""
+            etiqueta = f"{row['mes']} | {row['categoria']}{ubi_txt} | $ {row['limite']:,.0f}".replace(",", ".")
             opciones_pres.append((row['id'], etiqueta))
         
         etiquetas_pres = [op[1] for op in opciones_pres]
@@ -403,12 +408,14 @@ with pestana_presupuestos:
                 st.session_state["edit_cat_val"] = str(fila['categoria'])
                 st.session_state["edit_asig_val"] = bool(fila['asignado']) if 'asignado' in fila else False
                 st.session_state["edit_tipo_val"] = str(fila['tipo']) if fila['tipo'] in ['Inversión', 'Necesidad', 'Gasto General', 'Ahorro'] else 'Necesidad'
+                st.session_state["edit_ubi_val"] = str(fila['ubicacion']) if 'ubicacion' in fila and fila['ubicacion'] in opciones_ubicacion else 'Nu'
                 st.session_state["edit_lim_val"] = int(fila['limite'])
             else:
                 st.session_state["edit_mes_val"] = ""
                 st.session_state["edit_cat_val"] = ""
                 st.session_state["edit_asig_val"] = False
                 st.session_state["edit_tipo_val"] = "Necesidad"
+                st.session_state["edit_ubi_val"] = "Nu"
                 st.session_state["edit_lim_val"] = 0
 
         pres_sel_etiqueta = st.selectbox(
@@ -424,6 +431,8 @@ with pestana_presupuestos:
             st.session_state["edit_mes_val"] = ""
         if "edit_lim_val" not in st.session_state:
             st.session_state["edit_lim_val"] = 0
+        if "edit_ubi_val" not in st.session_state:
+            st.session_state["edit_ubi_val"] = "Nu"
 
         if pres_sel_etiqueta and pres_sel_etiqueta != "-- Selecciona un presupuesto --":
             id_seleccionado_p = next(op[0] for op in opciones_pres if op[1] == pres_sel_etiqueta)
@@ -437,8 +446,12 @@ with pestana_presupuestos:
             with col_p2:
                 opciones_tipo = ['Inversión', 'Necesidad', 'Gasto General', 'Ahorro']
                 tipo_actual_idx = opciones_tipo.index(st.session_state.get("edit_tipo_val", "Necesidad")) if st.session_state.get("edit_tipo_val", "Necesidad") in opciones_tipo else 1
-                
                 nuevo_tipo_p = st.selectbox("Tipo", opciones_tipo, index=tipo_actual_idx, key="input_tipo_presupuesto")
+                
+                ubi_actual = st.session_state.get("edit_ubi_val", "Nu")
+                ubi_actual_idx = opciones_ubicacion.index(ubi_actual) if ubi_actual in opciones_ubicacion else 0
+                nueva_ubicacion_p = st.selectbox("Ubicación del Dinero", opciones_ubicacion, index=ubi_actual_idx, key="input_ubicacion_presupuesto")
+                
                 nuevo_limite_p = st.number_input("Límite (COP)", value=st.session_state.get("edit_lim_val", 0), step=50000, format="%d", key="input_limite_presupuesto")
                 
             col_pb1, col_pb2 = st.columns(2)
@@ -446,14 +459,13 @@ with pestana_presupuestos:
                 if st.button("Guardar Cambios en Presupuesto", use_container_width=True, key="btn_guardar_cambios_presupuestos"):
                     query = """
                         UPDATE presupuestos 
-                        SET mes = %s, categoria = %s, tipo = %s, limite = %s, asignado = %s 
+                        SET mes = %s, categoria = %s, tipo = %s, limite = %s, asignado = %s, ubicacion = %s 
                         WHERE id = %s
                     """
-                    params = (nuevo_mes_p, nueva_categoria_p, nuevo_tipo_p, float(nuevo_limite_p), nuevo_asignado_p, int(id_seleccionado_p))
+                    params = (nuevo_mes_p, nueva_categoria_p, nuevo_tipo_p, float(nuevo_limite_p), nuevo_asignado_p, nueva_ubicacion_p, int(id_seleccionado_p))
                     ejecutar_sql(query, params)
                     st.success("¡Presupuesto actualizado correctamente!")
                     
-                    # Activamos la bandera para limpiar el selectbox de forma segura antes de renderizar
                     st.session_state["limpiar_seleccion"] = True
                     st.rerun()
             with col_pb2:
@@ -462,7 +474,6 @@ with pestana_presupuestos:
                     ejecutar_sql(query, (int(id_seleccionado_p),))
                     st.warning("¡Presupuesto eliminado!")
                     
-                    # Activamos la bandera para limpiar el selectbox de forma segura antes de renderizar
                     st.session_state["limpiar_seleccion"] = True
                     st.rerun()
 
@@ -478,12 +489,16 @@ with pestana_presupuestos:
         df_pres_visual = df_presupuestos.copy()
         if 'asignado' not in df_pres_visual.columns:
             df_pres_visual['asignado'] = False
+        if 'ubicacion' not in df_pres_visual.columns:
+            df_pres_visual['ubicacion'] = 'Sin asignar'
         
         df_pres_visual['Límite'] = df_pres_visual['limite'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-        df_pres_visual = df_pres_visual[['mes', 'categoria', 'tipo', 'Límite', 'asignado']].rename(columns={
+        
+        df_pres_visual = df_pres_visual[['mes', 'categoria', 'tipo', 'ubicacion', 'Límite', 'asignado']].rename(columns={
             'mes': 'Mes', 
             'categoria': 'Categoría', 
             'tipo': 'Tipo',
+            'ubicacion': 'Ubicación',
             'asignado': '¿Asignado en banco?'
         })
         
@@ -525,7 +540,7 @@ with pestana_presupuestos:
 
     else:
         st.info("No hay presupuestos configurados todavía.")
-
+        
 with pestana_deudas:
     st.subheader("Control y Registro de Deudas")
     
