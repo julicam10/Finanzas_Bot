@@ -580,7 +580,6 @@ with pestana_deudas:
     
     with st.expander("➕ Registrar nueva deuda"):
         with st.form("form_deuda", clear_on_submit=True):
-            st.markdown("**Registrar nueva deuda activa**")
             col_d1, col_d2 = st.columns(2)
             with col_d1:
                 deuda_input = st.text_input("Deuda (Ej. T.C. Bancolombia, Curso de inglés)", key="input_deuda_pestana_deudas")
@@ -598,7 +597,6 @@ with pestana_deudas:
                 st.success(f"¡Deuda '{deuda_input}' registrada exitosamente!")
                 st.rerun()
 
-    st.markdown("---")
     if not df_deudas.empty:
         ver_completadas_d = st.checkbox("Mostrar deudas completadas / pagadas", key="chk_comp_d")
         df_deudas_filtradas = df_deudas if ver_completadas_d else df_deudas[df_deudas['estado'] != 'Completada']
@@ -816,7 +814,6 @@ with pestana_metas:
                 st.success(f"¡Meta '{nombre_meta}' registrada con éxito!")
                 st.rerun()
 
-    st.markdown("---")
     if not df_metas.empty:
         ver_completadas_m = st.checkbox("Mostrar metas completadas", key="chk_comp_m")
         df_metas_filtradas = df_metas if ver_completadas_m else df_metas[df_metas['estado'] != 'Completada']
