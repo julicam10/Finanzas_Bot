@@ -37,7 +37,6 @@ def cargar_datos(query):
 
 st.title("📊 Centro de Comando Financiero")
 st.markdown("Monitoreo en vivo de transacciones, presupuestos, deudas, metas de ahorro y patrimonio.")
-st.divider()
 
 # Cargar datos de la base de datos
 try:
