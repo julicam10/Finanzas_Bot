@@ -341,7 +341,7 @@ with pestana_presupuestos:
     disponible_por_asignar = salario_mes - total_presupuestado
     
     with col_sal2:
-        st.metric(label="Total Presupuestado", value=f"$ {total_presupuestado:,.0f}".replace(",", "."))
+        st.metric(label="Total Histórico Presupuestado", value=f"$ {total_presupuestado:,.0f}".replace(",", "."))
     with col_sal3:
         st.metric(label="Disponible por Asignar", value=f"$ {disponible_por_asignar:,.0f}".replace(",", "."))
 
@@ -354,7 +354,11 @@ with pestana_presupuestos:
         st.markdown("**Asignar presupuesto, categoría, clasificación y ubicación**")
         col_p1, col_p2 = st.columns(2)
         with col_p1:
-            mes_input = st.text_input("Mes (Ej. 2026-07)", value="2026-07", key="nuevo_mes_presupuesto")
+            # Por defecto pre-llenamos con el mes actual
+            from datetime import datetime
+            mes_actual_sugerido = datetime.now().strftime("%Y-%m")
+            
+            mes_input = st.text_input("Mes (Ej. 2026-07)", value=mes_actual_sugerido, key="nuevo_mes_presupuesto")
             cat_input = st.text_input("Categoría (Ej. Mercado, VOO, Arriendo)", key="nueva_cat_presupuesto")
             ubicacion_input = st.selectbox("Ubicación del Dinero", opciones_ubicacion, key="nueva_ubicacion_presupuesto")
         with col_p2:
@@ -379,9 +383,7 @@ with pestana_presupuestos:
     # =========================================================================
     # 2. PANEL DE EDICIÓN O ELIMINACIÓN DE REGISTROS
     # =========================================================================
-    with st.expander("✏️ Editar o eliminar un presupuesto"):
-        
-        # Limpieza de estado pendiente antes de instanciar el selectbox
+    with st.expander("✏️ Editar o eliminar un presupuesto histórico"):
         if "limpiar_seleccion" in st.session_state and st.session_state["limpiar_seleccion"]:
             st.session_state["sel_presupuesto_edit"] = "-- Selecciona un presupuesto --"
             st.session_state["limpiar_seleccion"] = False
@@ -480,300 +482,96 @@ with pestana_presupuestos:
     st.markdown("---")
 
     # =========================================================================
-    # 3. TABLA Y GRÁFICO CIRCULAR (AL FINAL DE LA PESTAÑA)
+    # 3. TABLA Y GRÁFICO CIRCULAR (FILTRADOS POR MES)
     # =========================================================================
-    st.subheader("📊 Detalle y Gráfico Agrupado por Tipo")
+    st.subheader("📊 Detalle y Gráfico de Presupuestos")
     
     if not df_presupuestos.empty:
-        # Tabla de lectura
-        df_pres_visual = df_presupuestos.copy()
-        if 'asignado' not in df_pres_visual.columns:
-            df_pres_visual['asignado'] = False
-        if 'ubicacion' not in df_pres_visual.columns:
-            df_pres_visual['ubicacion'] = 'Sin asignar'
+        from datetime import datetime
         
-        df_pres_visual['Límite'] = df_pres_visual['limite'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+        # Obtenemos el mes actual en formato YYYY-MM
+        mes_actual = datetime.now().strftime("%Y-%m")
         
-        df_pres_visual = df_pres_visual[['mes', 'categoria', 'tipo', 'ubicacion', 'Límite', 'asignado']].rename(columns={
-            'mes': 'Mes', 
-            'categoria': 'Categoría', 
-            'tipo': 'Tipo',
-            'ubicacion': 'Ubicación',
-            'asignado': '¿Asignado en banco?'
-        })
-        
-        st.dataframe(df_pres_visual, use_container_width=True, hide_index=True)
-
-        st.markdown("---")
-
-        # --- GRÁFICO CIRCULAR (TIPO DONUT) AGRUPADO POR TIPO ---
-        import pandas as pd
-        import altair as alt
-
-        df_tipo_agrupado = df_presupuestos.groupby('tipo')['limite'].sum().reset_index()
-
-        escala_colores_tipo = alt.Scale(
-            domain=['Inversión', 'Necesidad', 'Gasto General', 'Ahorro'],
-            range=['#2AA63E', '#155DFC', '#E1712B', '#8E44AD']
-        )
-
-        base_circular = alt.Chart(df_tipo_agrupado).encode(
-            theta=alt.Theta(field="limite", type="quantitative", stack=True),
-            color=alt.Color(field="tipo", type="nominal", scale=escala_colores_tipo, title="Tipo de Presupuesto"),
-            tooltip=[
-                alt.Tooltip('tipo:N', title='Tipo'),
-                alt.Tooltip('limite:Q', title='Total Límite', format=',.0f')
-            ]
-        )
-
-        pie = base_circular.mark_arc(outerRadius=120, innerRadius=70)
-        texto = base_circular.mark_text(radius=145, size=13).encode(
-            text=alt.Text('limite:Q', format=',.0f')
-        )
-
-        grafico_circular = (pie + texto).properties(
-            title="Distribución de Presupuestos por Tipo",
-            height=400
+        # Filtro de visualización (Mes Actual vs Seleccionar Histórico)
+        opcion_vista = st.radio(
+            "Selecciona la vista de tus presupuestos:", 
+            ["Presupuesto del mes actual", "Consultar otro mes"], 
+            horizontal=True,
+            key="radio_filtro_mes_presupuesto"
         )
         
-        st.altair_chart(grafico_circular, use_container_width=True)
+        if opcion_vista == "Presupuesto del mes actual":
+            mes_filtrado = mes_actual
+            st.info(f"Mostrando el presupuesto correspondiente al mes en curso: **{mes_filtrado}**")
+        else:
+            # Obtenemos la lista única de meses disponibles en la BD de forma descendente
+            meses_disponibles = sorted(df_presupuestos['mes'].unique().tolist(), reverse=True)
+            if not meses_disponibles:
+                meses_disponibles = [mes_actual]
+            mes_filtrado = st.selectbox("Selecciona el mes a consultar:", meses_disponibles, key="sel_filtro_mes_historico")
 
-    else:
-        st.info("No hay presupuestos configurados todavía.")
-        
-with pestana_deudas:
-    st.subheader("Control y Registro de Deudas")
-    
-    with st.form("form_deuda", clear_on_submit=True):
-        st.markdown("**Registrar nueva deuda activa**")
-        col_d1, col_d2 = st.columns(2)
-        with col_d1:
-            deuda_input = st.text_input("Deuda (Ej. T.C. Bancolombia, Curso de inglés)", key="input_deuda_pestana_deudas")
-            estado_deuda = st.selectbox("Estado inicial", ["Pendiente", "Completada"])
-        with col_d2:
-            monto_total_deuda = st.number_input("Monto Total Inicial (COP)", min_value=0, value=0, step=50000, format="%d")
-            cuota_mes_deuda = st.number_input("Cuota o Pago Mínimo del Mes (COP)", min_value=0, value=0, step=10000, format="%d")
+        # Filtramos el DataFrame original según el mes seleccionado en la interfaz
+        df_pres_filtrado = df_presupuestos[df_presupuestos['mes'] == mes_filtrado]
+
+        if not df_pres_filtrado.empty:
+            # --- TABLA DE LECTURA (FILTRADA) ---
+            df_pres_visual = df_pres_filtrado.copy()
+            if 'asignado' not in df_pres_visual.columns:
+                df_pres_visual['asignado'] = False
+            if 'ubicacion' not in df_pres_visual.columns:
+                df_pres_visual['ubicacion'] = 'Sin asignar'
             
-        guardar_d = st.form_submit_button("Guardar Deuda")
-        if guardar_d and deuda_input:
-            ejecutar_sql(
-                "INSERT INTO deudas (deuda, monto_inicial, monto_total, cuota_mes, estado) VALUES (%s, %s, %s, %s, %s)",
-                (deuda_input, monto_total_deuda, monto_total_deuda, cuota_mes_deuda, estado_deuda)
-            )
-            st.success(f"¡Deuda '{deuda_input}' registrada exitosamente!")
-            st.rerun()
-
-    st.markdown("---")
-    if not df_deudas.empty:
-        ver_completadas_d = st.checkbox("Mostrar deudas completadas / pagadas", key="chk_comp_d")
-        df_deudas_filtradas = df_deudas if ver_completadas_d else df_deudas[df_deudas['estado'] != 'Completada']
-
-        if not df_deudas_filtradas.empty:
-            st.markdown("### 💸 Registrar abono a deuda")
-            with st.form("form_abono_deuda", clear_on_submit=True):
-                col_ab1, col_ab2 = st.columns(2)
-                with col_ab1:
-                    deudas_activas_lista = df_deudas[df_deudas['estado'] != 'Completada']['deuda'].tolist()
-                    deuda_a_abonar = st.selectbox("Selecciona la deuda", deudas_activas_lista if deudas_activas_lista else ["Sin deudas pendientes"])
-                with col_ab2:
-                    monto_abono = st.number_input("Monto a abonar (COP)", min_value=0, value=0, step=10000, format="%d")
-                
-                btn_abonar = st.form_submit_button("Aplicar Abono")
-                if btn_abonar and monto_abono > 0 and deuda_a_abonar != "Sin deudas pendientes":
-                    deuda_actual = df_deudas.loc[df_deudas['deuda'] == deuda_a_abonar, 'monto_total'].values[0]
-                    nuevo_monto = max(0, deuda_actual - monto_abono)
-                    nuevo_estado = 'Completada' if nuevo_monto == 0 else 'Pendiente'
-                    
-                    ejecutar_sql("UPDATE deudas SET monto_total = %s, estado = %s WHERE deuda = %s", (float(nuevo_monto), nuevo_estado, deuda_a_abonar))
-                    
-                    fecha_hoy = datetime.now().strftime("%Y-%m-%d")
-                    ejecutar_sql("INSERT INTO log_abonos (fecha, tipo, referencia, monto) VALUES (%s, %s, %s, %s)",
-                                 (fecha_hoy, 'Deuda', deuda_a_abonar, monto_abono))
-                    
-                    st.success(f"¡Abono de $ {monto_abono:,.0f} aplicado a '{deuda_a_abonar}'!".replace(",", "."))
-                    st.rerun()
-
-            st.markdown("---")
-            st.subheader("📊 Progreso de abonos a deudas")
+            # Calculamos el total de ese mes para mostrarlo
+            total_mes_filtrado = df_pres_visual['limite'].sum()
+            st.markdown(f"**Total presupuestado para {mes_filtrado}:** $ {total_mes_filtrado:,.0f}".replace(",", "."))
             
-            df_deudas_melted = df_deudas_filtradas.melt(id_vars=['deuda'], value_vars=['monto_inicial', 'monto_total'],
-                                                        var_name='Concepto', value_name='Monto')
-            df_deudas_melted['Concepto'] = df_deudas_melted['Concepto'].replace({
-                'monto_inicial': 'Deuda Inicial', 'monto_total': 'Saldo Pendiente'
+            df_pres_visual['Límite'] = df_pres_visual['limite'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
+            df_pres_visual = df_pres_visual[['mes', 'categoria', 'tipo', 'ubicacion', 'Límite', 'asignado']].rename(columns={
+                'mes': 'Mes', 
+                'categoria': 'Categoría', 
+                'tipo': 'Tipo',
+                'ubicacion': 'Ubicación',
+                'asignado': '¿Asignado en banco?'
             })
             
-            # 1. Definimos la escala de colores explícita
-            escala_colores_deudas = alt.Scale(
-                domain=['Deuda Inicial', 'Saldo Pendiente'], 
-                range=['#CD040E', '#FC5F67'] 
-            )
-
-            # 1. Definimos la escala de colores explícita (puedes cambiar los códigos #HEX por los que prefieras)
-            escala_colores_deudas = alt.Scale(
-                domain=['Deuda Inicial', 'Saldo Pendiente'], # Nombres exactos de tu leyenda
-                range=['#CC0000', '#FF6666']                 # Colores: Rojo oscuro y Rojo claro
-            )
-
-            grafico_deudas = alt.Chart(df_deudas_melted).mark_bar().encode(
-                x=alt.X('deuda:N', title='Deuda', axis=alt.Axis(
-                    labelAngle=0, 
-                    labelExpr="split(datum.value, ' ')"
-                )),
-                y=alt.Y('Monto:Q', axis=alt.Axis(format=',.0f', title='COP')),
-                
-                # 2. Inyectamos la escala en el parámetro color
-                color=alt.Color('Concepto:N', scale=escala_colores_deudas),
-                
-                xOffset='Concepto:N',
-                tooltip=[
-                    alt.Tooltip('deuda:N', title='Deuda'), 
-                    'Concepto', 
-                    alt.Tooltip('Monto:Q', format=',.0f')
-                ]
-            ).properties(height=350)
-            
-            st.altair_chart(grafico_deudas, use_container_width=True)
-
-            st.markdown("### 💳 Detalle de deudas")
-            
-            # --- 1. PREPARACIÓN DE DATOS Y CÁLCULO REAL ---
-            try:
-                # Obtenemos los abonos para calcular lo pagado realmente
-                df_log_deudas_calc = cargar_datos("SELECT * FROM log_abonos WHERE tipo = 'Deuda'")
-                if not df_log_deudas_calc.empty:
-                    abonos_agrupados = df_log_deudas_calc.groupby('referencia')['monto'].sum().reset_index()
-                    abonos_agrupados.rename(columns={'referencia': 'deuda', 'monto': 'Abonado Acumulado (COP)'}, inplace=True)
-                else:
-                    abonos_agrupados = pd.DataFrame(columns=['deuda', 'Abonado Acumulado (COP)'])
-            except:
-                abonos_agrupados = pd.DataFrame(columns=['deuda', 'Abonado Acumulado (COP)'])
-
-            df_deudas_mostrar = df_deudas_filtradas.copy()
-            if not df_deudas_mostrar.empty:
-                # Unimos y recalculamos saldos de forma segura
-                df_deudas_mostrar = pd.merge(df_deudas_mostrar, abonos_agrupados, on='deuda', how='left')
-                df_deudas_mostrar['Abonado Acumulado (COP)'] = df_deudas_mostrar['Abonado Acumulado (COP)'].fillna(0)
-                
-                df_deudas_mostrar['monto_total'] = df_deudas_mostrar['monto_inicial'] - df_deudas_mostrar['Abonado Acumulado (COP)']
-                df_deudas_mostrar['monto_total'] = df_deudas_mostrar['monto_total'].apply(lambda x: max(0, x))
-
-                # --- 2. TABLA VISUAL DE LECTURA (Formato COP) ---
-                df_deudas_visual = df_deudas_mostrar.copy()
-                df_deudas_visual['Monto Inicial'] = df_deudas_visual['monto_inicial'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-                df_deudas_visual['Saldo Pendiente'] = df_deudas_visual['monto_total'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-                df_deudas_visual['Cuota Mensual'] = df_deudas_visual['cuota_mes'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-                df_deudas_visual['Abonado Acumulado'] = df_deudas_visual['Abonado Acumulado (COP)'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-                
-                df_deudas_visual = df_deudas_visual[['deuda', 'Monto Inicial', 'Saldo Pendiente', 'Cuota Mensual', 'estado', 'Abonado Acumulado']]
-                df_deudas_visual = df_deudas_visual.rename(columns={'deuda': 'Deuda', 'estado': 'Estado'})
-                
-                st.dataframe(df_deudas_visual, use_container_width=True)
-
-                # --- 3. PANEL DESPLEGABLE DE EDICIÓN (Deudas) ---
-                with st.expander("✏️ Editar o eliminar una deuda"):
-                    deudas_lista = df_deudas_mostrar['deuda'].tolist()
-                    deuda_sel = st.selectbox("Selecciona la deuda a modificar:", deudas_lista, key="sel_deuda_edit")
-                    
-                    if deuda_sel:
-                        fila_sel = df_deudas_mostrar[df_deudas_mostrar['deuda'] == deuda_sel].iloc[0]
-                        
-                        col_d1, col_d2, col_d3 = st.columns(3)
-                        with col_d1:
-                            nueva_deuda = st.text_input("Nombre de la Deuda", value=fila_sel['deuda'], key="input_nueva_deuda_pestana_deudas")
-                            opciones_estado_d = ['Pendiente', 'Completada']
-                            estado_actual_d = fila_sel['estado'] if fila_sel['estado'] in opciones_estado_d else 'Pendiente'
-                            nuevo_estado_d = st.selectbox("Estado", opciones_estado_d, index=opciones_estado_d.index(estado_actual_d))
-                        with col_d2:
-                            nuevo_inicial = st.number_input("Monto Inicial (COP)", value=int(fila_sel['monto_inicial']), step=100000, format="%d")
-                        with col_d3:
-                            nueva_cuota = st.number_input("Cuota Mensual (COP)", value=int(fila_sel['cuota_mes']), step=50000, format="%d")
-                            
-                        col_db1, col_db2 = st.columns(2)
-                        with col_db1:
-                            if st.button("Guardar Cambios en Deuda", use_container_width=True, key="btn_guardar_cambios_deudas"):
-                                # Recalcular matemáticamente el saldo pendiente
-                                nuevo_saldo = float(nuevo_inicial) - float(fila_sel['Abonado Acumulado (COP)'])
-                                nuevo_saldo = max(0, nuevo_saldo)
-                                
-                                # Auto-completar si la deuda quedó saldada
-                                if nuevo_saldo <= 0:
-                                    nuevo_estado_d = 'Completada'
-                                    
-                                query = """
-                                    UPDATE deudas 
-                                    SET deuda = %s, monto_inicial = %s, monto_total = %s, cuota_mes = %s, estado = %s 
-                                    WHERE id = %s
-                                """
-                                params = (nueva_deuda, float(nuevo_inicial), nuevo_saldo, float(nueva_cuota), nuevo_estado_d, int(fila_sel['id']))
-                                ejecutar_sql(query, params)
-                                st.success("¡Deuda actualizada!")
-                                st.rerun()
-                        with col_db2:
-                            if st.button("Eliminar Deuda", type="primary", use_container_width=True, key="btn_eliminar_deuda"):
-                                query = "DELETE FROM deudas WHERE id = %s"
-                                ejecutar_sql(query, (int(fila_sel['id']),))
-                                st.warning("¡Deuda eliminada!")
-                                st.rerun()
-            else:
-                st.info("No hay deudas para mostrar en este momento.")
-
-            # --- 4. TABLA VISUAL Y EDICIÓN DEL HISTORIAL DE ABONOS ---
+            st.dataframe(df_pres_visual, use_container_width=True, hide_index=True)
             st.markdown("---")
-            st.markdown("### 📜 Historial de abonos a deudas")
-            
-            # Reutilizamos los datos consultados arriba para no saturar la base de datos
-            if 'df_log_deudas_calc' in locals() and not df_log_deudas_calc.empty:
-                df_log_deudas = df_log_deudas_calc.sort_values(by='id', ascending=False)
-                
-                # Tabla Visual del Historial
-                df_log_deudas_visual = df_log_deudas.copy()
-                df_log_deudas_visual['Monto Abonado'] = df_log_deudas_visual['monto'].apply(lambda x: f"$ {x:,.0f}".replace(",", "."))
-                df_log_deudas_visual = df_log_deudas_visual[['fecha', 'referencia', 'Monto Abonado']].rename(columns={
-                    'fecha': 'Fecha', 'referencia': 'Deuda'
-                })
-                st.dataframe(df_log_deudas_visual, use_container_width=True)
 
-                # Panel de Edición del Historial
-                with st.expander("✏️ Editar o Eliminar un Abono de Deuda"):
-                    opciones_log_d = []
-                    for _, row in df_log_deudas.iterrows():
-                        etiqueta = f"ID {row['id']} | {row['fecha']} | {row['referencia']} | $ {row['monto']:,.0f}".replace(",", ".")
-                        opciones_log_d.append((row['id'], etiqueta))
-                    
-                    etiquetas_log_d = [op[1] for op in opciones_log_d]
-                    log_sel_etiqueta_d = st.selectbox("Selecciona el abono a modificar:", etiquetas_log_d, key="sel_log_deuda")
-                    
-                    if log_sel_etiqueta_d:
-                        id_seleccionado_d = next(op[0] for op in opciones_log_d if op[1] == log_sel_etiqueta_d)
-                        fila_log_d = df_log_deudas[df_log_deudas['id'] == id_seleccionado_d].iloc[0]
-                        
-                        col_ld1, col_ld2, col_ld3 = st.columns(3)
-                        with col_ld1:
-                            nueva_fecha_d = st.text_input("Fecha (YYYY-MM-DD)", value=str(fila_log_d['fecha']), key="fecha_d")
-                        with col_ld2:
-                            nueva_ref_d = st.text_input("Referencia (Deuda)", value=fila_log_d['referencia'], key="ref_d")
-                        with col_ld3:
-                            nuevo_monto_d = st.number_input("Monto Abonado (COP)", value=int(fila_log_d['monto']), step=50000, format="%d", key="monto_d")
-                            
-                        col_ldb1, col_ldb2 = st.columns(2)
-                        with col_ldb1:
-                            if st.button("Guardar Cambios en Historial", use_container_width=True, key="btn_save_log_d"):
-                                query = "UPDATE log_abonos SET fecha = %s, referencia = %s, monto = %s WHERE id = %s"
-                                ejecutar_sql(query, (nueva_fecha_d, nueva_ref_d, float(nuevo_monto_d), int(id_seleccionado_d)))
-                                st.success("¡Historial actualizado!")
-                                st.rerun()
-                        with col_ldb2:
-                            if st.button("Eliminar Registro", type="primary", use_container_width=True, key="btn_del_log_d"):
-                                query = "DELETE FROM log_abonos WHERE id = %s"
-                                ejecutar_sql(query, (int(id_seleccionado_d),))
-                                st.warning("¡Registro eliminado!")
-                                st.rerun()
-            else:
-                st.info("Aún no hay abonos registrados para deudas.")
+            # --- GRÁFICO CIRCULAR (TIPO DONUT) AGRUPADO POR TIPO (FILTRADO) ---
+            import pandas as pd
+            import altair as alt
+
+            df_tipo_agrupado = df_pres_filtrado.groupby('tipo')['limite'].sum().reset_index()
+
+            escala_colores_tipo = alt.Scale(
+                domain=['Inversión', 'Necesidad', 'Gasto General', 'Ahorro'],
+                range=['#2AA63E', '#155DFC', '#E1712B', '#8E44AD']
+            )
+
+            base_circular = alt.Chart(df_tipo_agrupado).encode(
+                theta=alt.Theta(field="limite", type="quantitative", stack=True),
+                color=alt.Color(field="tipo", type="nominal", scale=escala_colores_tipo, title="Tipo de Presupuesto"),
+                tooltip=[
+                    alt.Tooltip('tipo:N', title='Tipo'),
+                    alt.Tooltip('limite:Q', title='Total Límite', format=',.0f')
+                ]
+            )
+
+            pie = base_circular.mark_arc(outerRadius=120, innerRadius=70)
+            texto = base_circular.mark_text(radius=145, size=13).encode(
+                text=alt.Text('limite:Q', format=',.0f')
+            )
+
+            grafico_circular = (pie + texto).properties(
+                title=f"Distribución de Presupuestos ({mes_filtrado})",
+                height=400
+            )
+            
+            st.altair_chart(grafico_circular, use_container_width=True)
         else:
-            st.info("No hay deudas pendientes en este momento. ¡Buen trabajo!")
+            st.warning(f"No hay presupuestos asignados para el mes seleccionado ({mes_filtrado}).")
     else:
-        st.info("No hay deudas registradas en el sistema.")
+        st.info("No hay presupuestos configurados todavía.")
 
 with pestana_metas:
     st.subheader("Seguimiento de Metas de Ahorro e Inversiones")
