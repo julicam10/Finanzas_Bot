@@ -578,24 +578,25 @@ with pestana_presupuestos:
 with pestana_deudas:
     st.subheader("Control y Registro de Deudas")
     
-    with st.form("form_deuda", clear_on_submit=True):
-        st.markdown("**Registrar nueva deuda activa**")
-        col_d1, col_d2 = st.columns(2)
-        with col_d1:
-            deuda_input = st.text_input("Deuda (Ej. T.C. Bancolombia, Curso de inglés)", key="input_deuda_pestana_deudas")
-            estado_deuda = st.selectbox("Estado inicial", ["Pendiente", "Completada"], key="sel_estado_inicial_deuda")
-        with col_d2:
-            monto_total_deuda = st.number_input("Monto Total Inicial (COP)", min_value=0, value=0, step=50000, format="%d", key="num_monto_total_deuda")
-            cuota_mes_deuda = st.number_input("Cuota o Pago Mínimo del Mes (COP)", min_value=0, value=0, step=10000, format="%d", key="num_cuota_mes_deuda")
-            
-        guardar_d = st.form_submit_button("Guardar Deuda")
-        if guardar_d and deuda_input:
-            ejecutar_sql(
-                "INSERT INTO deudas (deuda, monto_inicial, monto_total, cuota_mes, estado) VALUES (%s, %s, %s, %s, %s)",
-                (deuda_input, monto_total_deuda, monto_total_deuda, cuota_mes_deuda, estado_deuda)
-            )
-            st.success(f"¡Deuda '{deuda_input}' registrada exitosamente!")
-            st.rerun()
+    with st.expander("➕ Registrar nueva deuda"):
+        with st.form("form_deuda", clear_on_submit=True):
+            st.markdown("**Registrar nueva deuda activa**")
+            col_d1, col_d2 = st.columns(2)
+            with col_d1:
+                deuda_input = st.text_input("Deuda (Ej. T.C. Bancolombia, Curso de inglés)", key="input_deuda_pestana_deudas")
+                estado_deuda = st.selectbox("Estado inicial", ["Pendiente", "Completada"], key="sel_estado_inicial_deuda")
+            with col_d2:
+                monto_total_deuda = st.number_input("Monto Total Inicial (COP)", min_value=0, value=0, step=50000, format="%d", key="num_monto_total_deuda")
+                cuota_mes_deuda = st.number_input("Cuota o Pago Mínimo del Mes (COP)", min_value=0, value=0, step=10000, format="%d", key="num_cuota_mes_deuda")
+                
+            guardar_d = st.form_submit_button("Guardar Deuda")
+            if guardar_d and deuda_input:
+                ejecutar_sql(
+                    "INSERT INTO deudas (deuda, monto_inicial, monto_total, cuota_mes, estado) VALUES (%s, %s, %s, %s, %s)",
+                    (deuda_input, monto_total_deuda, monto_total_deuda, cuota_mes_deuda, estado_deuda)
+                )
+                st.success(f"¡Deuda '{deuda_input}' registrada exitosamente!")
+                st.rerun()
 
     st.markdown("---")
     if not df_deudas.empty:
@@ -603,29 +604,29 @@ with pestana_deudas:
         df_deudas_filtradas = df_deudas if ver_completadas_d else df_deudas[df_deudas['estado'] != 'Completada']
 
         if not df_deudas_filtradas.empty:
-            st.markdown("### 💸 Registrar abono a deuda")
-            with st.form("form_abono_deuda", clear_on_submit=True):
-                col_ab1, col_ab2 = st.columns(2)
-                with col_ab1:
-                    deudas_activas_lista = df_deudas[df_deudas['estado'] != 'Completada']['deuda'].tolist()
-                    deuda_a_abonar = st.selectbox("Selecciona la deuda", deudas_activas_lista if deudas_activas_lista else ["Sin deudas pendientes"], key="sel_deuda_abonar")
-                with col_ab2:
-                    monto_abono = st.number_input("Monto a abonar (COP)", min_value=0, value=0, step=10000, format="%d", key="num_monto_abono")
-                
-                btn_abonar = st.form_submit_button("Aplicar Abono")
-                if btn_abonar and monto_abono > 0 and deuda_a_abonar != "Sin deudas pendientes":
-                    deuda_actual = df_deudas.loc[df_deudas['deuda'] == deuda_a_abonar, 'monto_total'].values[0]
-                    nuevo_monto = max(0, deuda_actual - monto_abono)
-                    nuevo_estado = 'Completada' if nuevo_monto == 0 else 'Pendiente'
+            with st.expander("➕ Registrar nuevo abono a dedua"):
+                with st.form("form_abono_deuda", clear_on_submit=True):
+                    col_ab1, col_ab2 = st.columns(2)
+                    with col_ab1:
+                        deudas_activas_lista = df_deudas[df_deudas['estado'] != 'Completada']['deuda'].tolist()
+                        deuda_a_abonar = st.selectbox("Selecciona la deuda", deudas_activas_lista if deudas_activas_lista else ["Sin deudas pendientes"], key="sel_deuda_abonar")
+                    with col_ab2:
+                        monto_abono = st.number_input("Monto a abonar (COP)", min_value=0, value=0, step=10000, format="%d", key="num_monto_abono")
                     
-                    ejecutar_sql("UPDATE deudas SET monto_total = %s, estado = %s WHERE deuda = %s", (float(nuevo_monto), nuevo_estado, deuda_a_abonar))
-                    
-                    fecha_hoy = datetime.now().strftime("%Y-%m-%d")
-                    ejecutar_sql("INSERT INTO log_abonos (fecha, tipo, referencia, monto) VALUES (%s, %s, %s, %s)",
-                                 (fecha_hoy, 'Deuda', deuda_a_abonar, monto_abono))
-                    
-                    st.success(f"¡Abono de $ {monto_abono:,.0f} aplicado a '{deuda_a_abonar}'!".replace(",", "."))
-                    st.rerun()
+                    btn_abonar = st.form_submit_button("Aplicar Abono")
+                    if btn_abonar and monto_abono > 0 and deuda_a_abonar != "Sin deudas pendientes":
+                        deuda_actual = df_deudas.loc[df_deudas['deuda'] == deuda_a_abonar, 'monto_total'].values[0]
+                        nuevo_monto = max(0, deuda_actual - monto_abono)
+                        nuevo_estado = 'Completada' if nuevo_monto == 0 else 'Pendiente'
+                        
+                        ejecutar_sql("UPDATE deudas SET monto_total = %s, estado = %s WHERE deuda = %s", (float(nuevo_monto), nuevo_estado, deuda_a_abonar))
+                        
+                        fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+                        ejecutar_sql("INSERT INTO log_abonos (fecha, tipo, referencia, monto) VALUES (%s, %s, %s, %s)",
+                                     (fecha_hoy, 'Deuda', deuda_a_abonar, monto_abono))
+                        
+                        st.success(f"¡Abono de $ {monto_abono:,.0f} aplicado a '{deuda_a_abonar}'!".replace(",", "."))
+                        st.rerun()
 
             st.markdown("---")
             st.subheader("📊 Progreso de abonos a deudas")
@@ -794,26 +795,26 @@ with pestana_deudas:
 
 with pestana_metas:
     st.subheader("Seguimiento de Metas de Ahorro e Inversiones")
-    
-    with st.form("form_meta", clear_on_submit=True):
-        st.markdown("**Registrar nueva meta de ahorro**")
-        col_m1, col_m2 = st.columns(2)
-        with col_m1:
-            nombre_meta = st.text_input("Nombre de la Meta (Ej. Viaje a Europa)", key="input_meta_pestana_metas")
-            estrategia_meta = st.text_input("Estrategia / Plataforma (Ej. Cajitas Nu)", key="input_estrategia_pestana_metas")
-        with col_m2:
-            monto_obj = st.number_input("Monto Objetivo (COP)", min_value=0, value=0, step=100000, format="%d")
-            monto_act = st.number_input("Monto Actual Ahorrado (COP)", min_value=0, value=0, step=50000, format="%d")
-            
-        guardar_m = st.form_submit_button("Guardar meta de ahorro")
-        if guardar_m and nombre_meta:
-            estado_inicial_meta = 'Completada' if monto_act >= monto_obj and monto_obj > 0 else 'En curso'
-            ejecutar_sql(
-                "INSERT INTO metas_ahorro (nombre_meta, monto_objetivo, monto_actual, estrategia, estado) VALUES (%s, %s, %s, %s, %s)",
-                (nombre_meta, monto_obj, monto_act, estrategia_meta, estado_inicial_meta)
-            )
-            st.success(f"¡Meta '{nombre_meta}' registrada con éxito!")
-            st.rerun()
+
+    with st.expander("➕ Registrar nueva meta de ahorro"):
+        with st.form("form_meta", clear_on_submit=True):
+            col_m1, col_m2 = st.columns(2)
+            with col_m1:
+                nombre_meta = st.text_input("Nombre de la Meta (Ej. Viaje a Europa)", key="input_meta_pestana_metas")
+                estrategia_meta = st.text_input("Estrategia / Plataforma (Ej. Cajitas Nu)", key="input_estrategia_pestana_metas")
+            with col_m2:
+                monto_obj = st.number_input("Monto Objetivo (COP)", min_value=0, value=0, step=100000, format="%d")
+                monto_act = st.number_input("Monto Actual Ahorrado (COP)", min_value=0, value=0, step=50000, format="%d")
+                
+            guardar_m = st.form_submit_button("Guardar meta de ahorro")
+            if guardar_m and nombre_meta:
+                estado_inicial_meta = 'Completada' if monto_act >= monto_obj and monto_obj > 0 else 'En curso'
+                ejecutar_sql(
+                    "INSERT INTO metas_ahorro (nombre_meta, monto_objetivo, monto_actual, estrategia, estado) VALUES (%s, %s, %s, %s, %s)",
+                    (nombre_meta, monto_obj, monto_act, estrategia_meta, estado_inicial_meta)
+                )
+                st.success(f"¡Meta '{nombre_meta}' registrada con éxito!")
+                st.rerun()
 
     st.markdown("---")
     if not df_metas.empty:
@@ -821,33 +822,33 @@ with pestana_metas:
         df_metas_filtradas = df_metas if ver_completadas_m else df_metas[df_metas['estado'] != 'Completada']
 
         if not df_metas_filtradas.empty:
-            st.markdown("### 📥 Registrar nuevo ahorro a meta")
-            with st.form("form_abono_meta", clear_on_submit=True):
-                col_am1, col_am2 = st.columns(2)
-                with col_am1:
-                    metas_activas_lista = df_metas[df_metas['estado'] != 'Completada']['nombre_meta'].tolist()
-                    meta_a_abonar = st.selectbox("Selecciona la Meta", metas_activas_lista if metas_activas_lista else ["Sin metas en curso"])
-                with col_am2:
-                    monto_ahorro_nuevo = st.number_input("Monto a Sumar al Ahorro (COP)", min_value=0, value=0, step=50000, format="%d")
-                
-                btn_sumar_ahorro = st.form_submit_button("Actualizar Ahorro")
-                if btn_sumar_ahorro and monto_ahorro_nuevo > 0 and meta_a_abonar != "Sin metas en curso":
-                    meta_row = df_metas.loc[df_metas['nombre_meta'] == meta_a_abonar].iloc[0]
-                    ahorro_actual = meta_row['monto_actual']
-                    monto_obj_val = meta_row['monto_objetivo']
+            with st.expander("➕ Registrar nuevo abono a ahorro"):
+                with st.form("form_abono_meta", clear_on_submit=True):
+                    col_am1, col_am2 = st.columns(2)
+                    with col_am1:
+                        metas_activas_lista = df_metas[df_metas['estado'] != 'Completada']['nombre_meta'].tolist()
+                        meta_a_abonar = st.selectbox("Selecciona la Meta", metas_activas_lista if metas_activas_lista else ["Sin metas en curso"])
+                    with col_am2:
+                        monto_ahorro_nuevo = st.number_input("Monto a Sumar al Ahorro (COP)", min_value=0, value=0, step=50000, format="%d")
                     
-                    nuevo_ahorro = ahorro_actual + monto_ahorro_nuevo
-                    nuevo_estado_meta = 'Completada' if nuevo_ahorro >= monto_obj_val else 'En curso'
-                    
-                    ejecutar_sql("UPDATE metas_ahorro SET monto_actual = %s, estado = %s WHERE nombre_meta = %s", 
-                                 (float(nuevo_ahorro), nuevo_estado_meta, meta_a_abonar))
-                    
-                    fecha_hoy = datetime.now().strftime("%Y-%m-%d")
-                    ejecutar_sql("INSERT INTO log_abonos (fecha, tipo, referencia, monto) VALUES (%s, %s, %s, %s)",
-                                 (fecha_hoy, 'Meta', meta_a_abonar, monto_ahorro_nuevo))
-                    
-                    st.success(f"¡Se sumaron $ {monto_ahorro_nuevo:,.0f} a la meta '{meta_a_abonar}'!".replace(",", "."))
-                    st.rerun()
+                    btn_sumar_ahorro = st.form_submit_button("Actualizar Ahorro")
+                    if btn_sumar_ahorro and monto_ahorro_nuevo > 0 and meta_a_abonar != "Sin metas en curso":
+                        meta_row = df_metas.loc[df_metas['nombre_meta'] == meta_a_abonar].iloc[0]
+                        ahorro_actual = meta_row['monto_actual']
+                        monto_obj_val = meta_row['monto_objetivo']
+                        
+                        nuevo_ahorro = ahorro_actual + monto_ahorro_nuevo
+                        nuevo_estado_meta = 'Completada' if nuevo_ahorro >= monto_obj_val else 'En curso'
+                        
+                        ejecutar_sql("UPDATE metas_ahorro SET monto_actual = %s, estado = %s WHERE nombre_meta = %s", 
+                                     (float(nuevo_ahorro), nuevo_estado_meta, meta_a_abonar))
+                        
+                        fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+                        ejecutar_sql("INSERT INTO log_abonos (fecha, tipo, referencia, monto) VALUES (%s, %s, %s, %s)",
+                                     (fecha_hoy, 'Meta', meta_a_abonar, monto_ahorro_nuevo))
+                        
+                        st.success(f"¡Se sumaron $ {monto_ahorro_nuevo:,.0f} a la meta '{meta_a_abonar}'!".replace(",", "."))
+                        st.rerun()
 
             st.markdown("---")
             st.subheader("📊 Progreso de metas de ahorro")
@@ -1053,29 +1054,29 @@ with pestana_inversiones:
     st.markdown("---")
 
     # 2. Formulario para registrar o actualizar activos/inversiones
-    with st.form("form_inversion", clear_on_submit=True):
-        st.markdown("**Registrar o actualizar valor de un activo o una inversión**")
-        col_i1, col_i2 = st.columns(2)
-        with col_i1:
-            activo_input = st.text_input("Nombre del activo (Ej. S&P 500 VOO, TSMC)", key="input_activo_pestana_patrimonio")
-        with col_i2:
-            monto_inv_input = st.number_input("Monto actual invertido (COP)", min_value=0, value=0, step=50000, format="%d")
-            
-        guardar_inv = st.form_submit_button("Guardar Inversión")
-        if guardar_inv and activo_input:
-            fecha_hoy = datetime.now().strftime("%Y-%m-%d")
-            ejecutar_sql(
-                "INSERT INTO inversiones (fecha, activo, monto_invertido) VALUES (%s, %s, %s)",
-                (fecha_hoy, activo_input, monto_inv_input)
-            )
-            st.success(f"¡Inversión en '{activo_input}' registrada exitosamente!")
-            st.rerun()
+    with st.expander("➕ Registrar nueva inversión"):
+        with st.form("form_inversion", clear_on_submit=True):
+            col_i1, col_i2 = st.columns(2)
+            with col_i1:
+                activo_input = st.text_input("Nombre del activo (Ej. S&P 500 VOO, TSMC)", key="input_activo_pestana_patrimonio")
+            with col_i2:
+                monto_inv_input = st.number_input("Monto actual invertido (COP)", min_value=0, value=0, step=50000, format="%d")
+                
+            guardar_inv = st.form_submit_button("Guardar Inversión")
+            if guardar_inv and activo_input:
+                fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+                ejecutar_sql(
+                    "INSERT INTO inversiones (fecha, activo, monto_invertido) VALUES (%s, %s, %s)",
+                    (fecha_hoy, activo_input, monto_inv_input)
+                )
+                st.success(f"¡Inversión en '{activo_input}' registrada exitosamente!")
+                st.rerun()
 
     st.markdown("---")
 
     # 3. Visualización y Gráfico
     if not df_inversiones.empty:
-        st.subheader("📊 Distribución del Portafolio")
+        st.subheader("📊 Distribución del portafolio")
         
         col_g1, col_g2 = st.columns(2)
 
