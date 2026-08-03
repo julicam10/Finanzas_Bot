@@ -1069,8 +1069,6 @@ with pestana_inversiones:
                 st.success(f"¡Inversión en '{activo_input}' registrada exitosamente!")
                 st.rerun()
 
-    st.markdown("---")
-
     # 3. Visualización y Gráfico
     if not df_inversiones.empty:
         st.subheader("📊 Distribución del portafolio")
