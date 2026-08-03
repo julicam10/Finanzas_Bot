@@ -336,12 +336,17 @@ with pestana_presupuestos:
     col_sal1, col_sal2, col_sal3 = st.columns(3)
     with col_sal1:
         salario_mes = st.number_input("Ingreso / Salario del Mes (COP)", min_value=0, value=6427740, step=100000, format="%d", key="input_salario_presupuesto")
-    
-    total_presupuestado = df_presupuestos['limite'].sum() if not df_presupuestos.empty else 0
+
+    from datetime import datetime
+    mes_actual_top = datetime.now().strftime("%Y-%m")
+
+    df_presupuestos_mes = df_presupuestos[df_presupuestos['mes'] == mes_actual_top]
+
+    total_presupuestado = df_presupuestos_mes['limite'].sum() if not df_presupuestos_mes.empty else 0
     disponible_por_asignar = salario_mes - total_presupuestado
     
     with col_sal2:
-        st.metric(label="Total Histórico Presupuestado", value=f"$ {total_presupuestado:,.0f}".replace(",", "."))
+        st.metric(label=f"Total Presupuestado ({mes_actual_top})", value=f"$ {total_presupuestado:,.0f}".replace(",", "."))
     with col_sal3:
         st.metric(label="Disponible por Asignar", value=f"$ {disponible_por_asignar:,.0f}".replace(",", "."))
 
