@@ -80,7 +80,7 @@ pestana_trans, pestana_historial, pestana_presupuestos, pestana_deudas, pestana_
 ])
 
 with pestana_trans:
-    st.subheader("Gastos del Mes Actual")
+    st.subheader("📝 Gastos del mes actual")
 
      # --- NUEVO: Guía de categorías desplegable ---
     with st.expander("💡 Ver categorías del bot y palabras clave (Haz clic para desplegar)"):
@@ -207,7 +207,6 @@ with pestana_trans:
                             st.rerun()
             
             # --- 3. GRÁFICA INTACTA ---
-            st.markdown("---")
             st.subheader("Gastos por categoría")
             df_categoria = df_mes_actual.groupby('categoria')['monto'].sum().reset_index()
             df_categoria.columns = ['Categoría', 'Monto']
@@ -225,7 +224,7 @@ with pestana_trans:
         st.info("Aún no hay transacciones en la base de datos.")
 
 with pestana_historial:
-    st.subheader("📅 Historial de Transacciones por Mes")
+    st.subheader("📅 Historial de transacciones por mes")
     
     if not df_transacciones.empty:
         # Extraer los meses únicos
@@ -299,7 +298,7 @@ with pestana_historial:
         st.info("No hay historial disponible todavía.")
 
 with pestana_presupuestos:
-    st.subheader("Gestión de Presupuestos")
+    st.subheader("🎯 Gestión de presupuesto")
 
     # Lista estandarizada de opciones para ubicación del dinero
     opciones_ubicacion = ["Nu", "Bancolombia", "Efectivo", "No aplica", "Otro"]
@@ -346,8 +345,6 @@ with pestana_presupuestos:
         st.metric(label=f"Total Presupuestado ({mes_actual_top})", value=f"$ {total_presupuestado:,.0f}".replace(",", "."))
     with col_sal3:
         st.metric(label="Disponible por Asignar", value=f"$ {disponible_por_asignar:,.0f}".replace(",", "."))
-
-    st.markdown("---")
     
     # =========================================================================
     # 1. FORMULARIO DE NUEVO PRESUPUESTO
@@ -479,12 +476,10 @@ with pestana_presupuestos:
                     st.session_state["limpiar_seleccion"] = True
                     st.rerun()
 
-    st.markdown("---")
-
     # =========================================================================
     # 3. TABLA Y GRÁFICO CIRCULAR (FILTRADOS POR MES)
     # =========================================================================
-    st.subheader("📊 Detalle y Gráfico de Presupuestos")
+    st.subheader("📊 Detalle y gráfico de presupuestos")
     
     if not df_presupuestos.empty:
         from datetime import datetime
@@ -573,7 +568,7 @@ with pestana_presupuestos:
         st.info("No hay presupuestos configurados todavía.")
 
 with pestana_deudas:
-    st.subheader("Control y Registro de Deudas")
+    st.subheader("💳 Gestión de deudas")
     
     with st.expander("➕ Registrar nueva deuda"):
         with st.form("form_deuda", clear_on_submit=True):
@@ -623,7 +618,6 @@ with pestana_deudas:
                         st.success(f"¡Abono de $ {monto_abono:,.0f} aplicado a '{deuda_a_abonar}'!".replace(",", "."))
                         st.rerun()
 
-            st.markdown("---")
             st.subheader("📊 Progreso de abonos a deudas")
             
             df_deudas_melted = df_deudas_filtradas.melt(id_vars=['deuda'], value_vars=['monto_inicial', 'monto_total'],
@@ -788,7 +782,7 @@ with pestana_deudas:
         st.info("No hay deudas registradas en el sistema.")
 
 with pestana_metas:
-    st.subheader("Seguimiento de Metas de Ahorro e Inversiones")
+    st.subheader("💰 Gestión de ahorro")
 
     with st.expander("➕ Registrar nueva meta de ahorro"):
         with st.form("form_meta", clear_on_submit=True):
@@ -843,7 +837,6 @@ with pestana_metas:
                         st.success(f"¡Se sumaron $ {monto_ahorro_nuevo:,.0f} a la meta '{meta_a_abonar}'!".replace(",", "."))
                         st.rerun()
 
-            st.markdown("---")
             st.subheader("📊 Progreso de metas de ahorro")
             df_metas_melted = df_metas_filtradas.melt(id_vars=['nombre_meta'], value_vars=['monto_objetivo', 'monto_actual'],
                                                      var_name='Tipo', value_name='Monto')
@@ -1016,7 +1009,7 @@ with pestana_metas:
         st.info("No hay metas de ahorro registradas.")
 
 with pestana_inversiones:
-    st.subheader("💎 Patrimonio Neto e Inversiones")
+    st.subheader("💎 Patrimonio neto e inversiones")
     
     # 1. Cálculos principales
     total_inversiones = df_inversiones['monto_invertido'].sum() if not df_inversiones.empty else 0
