@@ -269,8 +269,6 @@ with pestana_historial:
         else:
             st.info("No hay transacciones registradas para este mes.")
         
-        st.markdown("---")
-        
         # 3. Gráfica por categoría de ese mes
         st.subheader("Gastos por categoría")
         df_categoria_hist = df_mes_historial.groupby('categoria')['monto'].sum().reset_index()
@@ -737,7 +735,6 @@ with pestana_deudas:
                 st.info("No hay deudas para mostrar en este momento.")
 
             # --- 4. TABLA VISUAL Y EDICIÓN DEL HISTORIAL DE ABONOS ---
-            st.markdown("---")
             st.markdown("### 📜 Historial de abonos a deudas")
             
             if 'df_log_deudas_calc' in locals() and not df_log_deudas_calc.empty:
@@ -952,7 +949,6 @@ with pestana_metas:
                             st.rerun()
 
             # --- 3. TABLA VISUAL Y EDICIÓN DEL HISTORIAL DE ABONOS ---
-            st.markdown("---")
             st.markdown("### 📜 Historial abonos a metas")
             
             try:
@@ -1047,8 +1043,6 @@ with pestana_inversiones:
         st.metric(label="Total Invertido", value=f"$ {total_inversiones:,.0f}".replace(",", "."))
     with col_m3:
         st.metric(label="Deudas Totales (Pendientes)", value=f"$ {total_deudas_pendientes:,.0f}".replace(",", "."))
-
-    st.markdown("---")
 
     # 2. Formulario para registrar o actualizar activos/inversiones
     with st.expander("➕ Registrar nueva inversión"):
