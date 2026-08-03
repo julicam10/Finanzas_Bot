@@ -355,33 +355,34 @@ with pestana_presupuestos:
     # =========================================================================
     # 1. FORMULARIO DE NUEVO PRESUPUESTO
     # =========================================================================
-    with st.form("form_presupuesto", clear_on_submit=True):
-        st.markdown("**Asignar presupuesto, categoría, clasificación y ubicación**")
-        col_p1, col_p2 = st.columns(2)
-        with col_p1:
-            # Por defecto pre-llenamos con el mes actual
-            from datetime import datetime
-            mes_actual_sugerido = datetime.now().strftime("%Y-%m")
-            
-            mes_input = st.text_input("Mes (Ej. 2026-07)", value=mes_actual_sugerido, key="nuevo_mes_presupuesto")
-            cat_input = st.text_input("Categoría (Ej. Mercado, VOO, Arriendo)", key="nueva_cat_presupuesto")
-            ubicacion_input = st.selectbox("Ubicación del Dinero", opciones_ubicacion, key="nueva_ubicacion_presupuesto")
-        with col_p2:
-            tipo_input = st.selectbox(
-                "Tipo de Presupuesto", 
-                ["Necesidad", "Ahorro", "Inversión", "Gasto General"],
-                key="nuevo_tipo_presupuesto"
-            )
-            limite_input = st.number_input("Límite Presupuestado (COP)", min_value=0, value=0, step=50000, format="%d", key="nuevo_limite_presupuesto")
-            
-        guardar_p = st.form_submit_button("Guardar Presupuesto")
-        if guardar_p and cat_input:
-            ejecutar_sql(
-                "INSERT INTO presupuestos (mes, categoria, tipo, limite, ubicacion) VALUES (%s, %s, %s, %s, %s)",
-                (mes_input, cat_input.capitalize(), tipo_input, limite_input, ubicacion_input)
-            )
-            st.success(f"¡Presupuesto para {cat_input} guardado exitosamente!")
-            st.rerun()
+    with st.expander("➕ Registrar nueva transacción manual"):
+        with st.form("form_presupuesto", clear_on_submit=True):
+            st.markdown("**Asignar presupuesto, categoría, clasificación y ubicación**")
+            col_p1, col_p2 = st.columns(2)
+            with col_p1:
+                # Por defecto pre-llenamos con el mes actual
+                from datetime import datetime
+                mes_actual_sugerido = datetime.now().strftime("%Y-%m")
+                
+                mes_input = st.text_input("Mes (Ej. 2026-07)", value=mes_actual_sugerido, key="nuevo_mes_presupuesto")
+                cat_input = st.text_input("Categoría (Ej. Mercado, VOO, Arriendo)", key="nueva_cat_presupuesto")
+                ubicacion_input = st.selectbox("Ubicación del Dinero", opciones_ubicacion, key="nueva_ubicacion_presupuesto")
+            with col_p2:
+                tipo_input = st.selectbox(
+                    "Tipo de Presupuesto", 
+                    ["Necesidad", "Ahorro", "Inversión", "Gasto General"],
+                    key="nuevo_tipo_presupuesto"
+                )
+                limite_input = st.number_input("Límite Presupuestado (COP)", min_value=0, value=0, step=50000, format="%d", key="nuevo_limite_presupuesto")
+                
+            guardar_p = st.form_submit_button("Guardar Presupuesto")
+            if guardar_p and cat_input:
+                ejecutar_sql(
+                    "INSERT INTO presupuestos (mes, categoria, tipo, limite, ubicacion) VALUES (%s, %s, %s, %s, %s)",
+                    (mes_input, cat_input.capitalize(), tipo_input, limite_input, ubicacion_input)
+                )
+                st.success(f"¡Presupuesto para {cat_input} guardado exitosamente!")
+                st.rerun()
 
     st.markdown("---")
 
