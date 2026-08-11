@@ -92,6 +92,8 @@ with pestana_trans:
         * **Casa / Obligaciones**: arriendo
         * **Mercado**: huevo, proteina, carne, d1, ara, éxito, exito, fruta, verdura
         * **Comida fuera**: hamburguesa, pizza, papas king, comida fuera
+        * **Carro**: carro, gasolina, arreglo, llave, llanta, parqueadero, peaje, lavadero, soat
+        * **Oficina**: oficina, transmilenio, almuerzo, desayuno
         * **Bienestar y Cuidado**: barberia, gimnasio, uñas
         * **Mascota (Alma)**: comida alma, arena alma
         * **Suscripciones**: netflix, youtube, google fotos
@@ -321,6 +323,8 @@ with pestana_presupuestos:
         * **Casa / Obligaciones**: arriendo
         * **Mercado**: huevo, proteina, carne, d1, ara, éxito, exito, fruta, verdura
         * **Comida fuera**: hamburguesa, pizza, papas king, comida fuera
+        * **Carro**: carro, gasolina, arreglo, llave, llanta, parqueadero, peaje, lavadero, soat
+        * **Oficina**: oficina, transmilenio, almuerzo, desayuno
         * **Bienestar y Cuidado**: barberia, gimnasio, uñas
         * **Mascota (Alma)**: comida alma, arena alma
         * **Suscripciones**: netflix, youtube, google fotos

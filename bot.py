@@ -41,6 +41,10 @@ def clasificar_gasto(concepto):
         return "Casa / Obligaciones"
     elif any(w in c_lower for w in ["huevos", "proteina", "carne", "d1", "ara", "éxito", "exito", "frutas", "verduras", "pollo"]):
         return "Mercado"
+    elif any(w in c_lower for w in ["oficina", "transmilenio", "almuerzo", "desayuno"]):
+        return "Oficina"
+    elif any(w in c_lower for w in ["carro", "gasolina", "arreglo", "llaves", "llantas", "parqueadero", "peaje", "lavadero", "soat"]):
+        return "Carro"
     elif any(w in c_lower for w in ["hamburguesa", "pizza", "papas king", "comida fuera"]):
         return "Comida fuera"
     elif any(w in c_lower for w in ["barberia", "gimnasio", "uñas"]):
