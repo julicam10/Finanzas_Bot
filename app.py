@@ -70,7 +70,7 @@ except:
     df_log = pd.DataFrame()
 
 # Pestañas de navegación organizadas
-pestana_trans, pestana_historial, pestana_presupuestos, pestana_deudas, pestana_metas, pestana_inversiones, pestana_analisis = st.tabs([
+pestana_trans, pestana_historial, pestana_presupuestos, pestana_deudas, pestana_metas, pestana_inversiones, pestana_patrones = st.tabs([
     "📝 Gastos del mes", 
     "📅 Historial de gastos",
     "🎯 Presupuestos", 
@@ -1278,7 +1278,7 @@ with pestana_patrones:
             
     else:
         st.info("Aún no hay suficientes transacciones registradas este mes para activar el detector de patrones.")
-        
+
 st.sidebar.title("Navegación")
 st.sidebar.info(
     "Panel conectado a `finance_bot.db`. "
