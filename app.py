@@ -1183,7 +1183,7 @@ with pestana_inversiones:
     else:
         st.info("Aún no tienes inversiones registradas. Usa el formulario de arriba para agregar tu primer activo (ej. VOO o TSMC).")
 
-with pestana_analisis:
+with pestana_patrones:
     st.subheader("🕵️ Detector de Patrones y Hábitos")
     st.markdown("Aquí analizamos el comportamiento de tus gastos para mostrarte alertas basadas en tus costumbres de consumo.")
 
@@ -1207,6 +1207,7 @@ with pestana_analisis:
         gasto_primera_semana = df_patrones[df_patrones['dia_numero'] <= 7]['monto'].sum()
         porcentaje_primera = (gasto_primera_semana / gasto_total) * 100 if gasto_total > 0 else 0
 
+        # --- SECCIÓN 1: RITMO Y DÍAS DE RIESGO ---
         col_p1, col_p2 = st.columns(2)
 
         with col_p1:
@@ -1231,21 +1232,22 @@ with pestana_analisis:
             dia_comida = df_comida.groupby('dia_semana')['monto'].sum().sort_values(ascending=False).index[0]
             st.info(f"🍔 **Patrón de Antojos:** La mayor parte de tus gastos en 'Comida fuera' ocurren los **{dia_comida}s**. Si quieres optimizar tus ahorros, este es el día clave para planear algo en casa.")
 
-    st.markdown("---")
-    st.subheader("📊 Análisis Avanzado de Comportamiento")
+        st.markdown("---")
 
+        # --- SECCIÓN 2: ANÁLISIS AVANZADO (Frecuencia y Quincenas) ---
+        st.subheader("📊 Análisis Avanzado de Comportamiento")
+        
         col_a1, col_a2 = st.columns(2)
 
         with col_a1:
             st.markdown("### 🔄 Frecuencia por Categoría")
             # Agrupamos para contar cuántas transacciones haces por categoría y cuánto suman
-            frecuencia_cat = df_avanzado.groupby('categoria').agg(
+            frecuencia_cat = df_patrones.groupby('categoria').agg(
                 transacciones=('monto', 'count'),
                 total_gastado=('monto', 'sum')
             ).sort_values(by='transacciones', ascending=False).reset_index()
 
             if not frecuencia_cat.empty:
-                # Mostramos un resumen limpio de cuáles categorías repites más
                 for _, row in frecuencia_cat.head(4).iterrows():
                     st.markdown(f"- **{row['categoria']}**: {int(row['transacciones'])} veces este mes (Total: $ {row['total_gastado']:,.0f})".replace(",", "."))
             else:
@@ -1254,8 +1256,8 @@ with pestana_analisis:
         with col_a2:
             st.markdown("### ⚖️ Comparativa de Quincenas")
             # Dividimos el mes en quincena 1 (días 1 al 15) y quincena 2 (del 16 en adelante)
-            q1 = df_avanzado[df_avanzado['dia_numero'] <= 15]['monto'].sum()
-            q2 = df_avanzado[df_avanzado['dia_numero'] > 15]['monto'].sum()
+            q1 = df_patrones[df_patrones['dia_numero'] <= 15]['monto'].sum()
+            q2 = df_patrones[df_patrones['dia_numero'] > 15]['monto'].sum()
             total_q = q1 + q2
 
             if total_q > 0:
@@ -1266,17 +1268,17 @@ with pestana_analisis:
                 st.markdown(f"- **2da Quincena (Días 16-31):** $ {q2:,.0f} ({p_q2:.0f}%)".replace(",", "."))
 
                 if p_q1 > 65:
-                    st.warning("⚠️ **Efecto Rebote:** Estás concentrando más del 65% de tus gastos en la primera mitad del mes. Cuidado con el flujo de caja para los días restantes.")
+                    st.warning("⚠️ **Efecto Rebote:** Estás concentrando más del 65% de tus gastos en la primera mitad del mes.")
                 elif abs(p_q1 - p_q2) < 10:
                     st.success("✅ **Gasto Equilibrado:** Tus salidas de dinero están muy bien distribuidas entre ambas quincenas.")
                 else:
-                    st.info("ℹ️ Tu comportamiento de gasto en la segunda quincena es mayor, mantén el monitoreo.")
+                    st.info("ℹ️ Mayor volumen de gasto registrado en la segunda quincena.")
             else:
                 st.info("Aún no hay transacciones suficientes para comparar quincenas.")
-
+            
     else:
         st.info("Aún no hay suficientes transacciones registradas este mes para activar el detector de patrones.")
-
+        
 st.sidebar.title("Navegación")
 st.sidebar.info(
     "Panel conectado a `finance_bot.db`. "
