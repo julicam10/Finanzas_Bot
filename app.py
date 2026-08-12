@@ -1234,11 +1234,6 @@ with pestana_analisis:
     st.markdown("---")
     st.subheader("📊 Análisis Avanzado de Comportamiento")
 
-        # Aseguramos que tenemos los datos limpios para trabajar
-        df_avanzado = df_mes_actual.copy()
-        df_avanzado['fecha_dt'] = pd.to_datetime(df_avanzado['fecha'])
-        df_avanzado['dia_numero'] = df_avanzado['fecha_dt'].dt.day
-
         col_a1, col_a2 = st.columns(2)
 
         with col_a1:
