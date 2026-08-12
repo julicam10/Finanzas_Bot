@@ -69,6 +69,39 @@ try:
 except:
     df_log = pd.DataFrame()
 
+# --- BLOQUE DE KPIS PRINCIPALES (SIEMPRE VISIBLES) ---
+# Calculamos los valores en base a tus variables existentes
+salario_actual = 6427740 # O la variable donde guardes tu ingreso mensual
+gasto_actual = df_mes_actual['monto'].sum() if 'df_mes_actual' in locals() and not df_mes_actual.empty else 0
+dinero_disponible = salario_actual - gasto_actual
+
+# Asumimos que tienes variables o puedes sumar tus tablas de patrimonio y deudas
+total_patrimonio = df_patrimonio['valor'].sum() if 'df_patrimonio' in locals() and not df_patrimonio.empty else 0
+total_deudas = df_deudas['saldo_pendiente'].sum() if 'df_deudas' in locals() and not df_deudas.empty else 0
+
+col_k1, col_k2, col_k3, col_k4 = st.columns(4)
+
+with col_k1:
+    st.metric(
+        label="💰 Disponible Mes", 
+        value=f"$ {dinero_disponible:,.0f}".replace(",", ".")
+    )
+with col_k2:
+    st.metric(
+        label="📉 Gastos del Mes", 
+        value=f"$ {gasto_actual:,.0f}".replace(",", ".")
+    )
+with col_k3:
+    st.metric(
+        label="🏦 Patrimonio Actual", 
+        value=f"$ {total_patrimonio:,.0f}".replace(",", ".")
+    )
+with col_k4:
+    st.metric(
+        label="💳 Deudas Totales", 
+        value=f"$ {total_deudas:,.0f}".replace(",", ".")
+    )
+
 # Pestañas de navegación organizadas
 pestana_trans, pestana_historial, pestana_presupuestos, pestana_deudas, pestana_metas, pestana_inversiones, pestana_patrones = st.tabs([
     "📝 Gastos del mes", 
