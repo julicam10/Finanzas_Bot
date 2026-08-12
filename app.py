@@ -70,13 +70,14 @@ except:
     df_log = pd.DataFrame()
 
 # Pestañas de navegación organizadas
-pestana_trans, pestana_historial, pestana_presupuestos, pestana_deudas, pestana_metas, pestana_inversiones = st.tabs([
+pestana_trans, pestana_historial, pestana_presupuestos, pestana_deudas, pestana_metas, pestana_inversiones, pestana_analisis = st.tabs([
     "📝 Gastos del mes", 
     "📅 Historial de gastos",
     "🎯 Presupuestos", 
     "💳 Deudas", 
     "💰 Ahorro",
-    "💎 Patrimonio & Inversiones"
+    "💎 Patrimonio & Inversiones",
+    "📊 Análisis financiero"
 ])
 
 with pestana_trans:
@@ -1181,6 +1182,57 @@ with pestana_inversiones:
             st.altair_chart(grafico_inversiones, use_container_width=True)
     else:
         st.info("Aún no tienes inversiones registradas. Usa el formulario de arriba para agregar tu primer activo (ej. VOO o TSMC).")
+
+with pestana_analisis:
+    st.subheader("🕵️ Detector de Patrones y Hábitos")
+    st.markdown("Aquí analizamos el comportamiento de tus gastos para mostrarte alertas basadas en tus costumbres de consumo.")
+
+    # Verificamos si tienes la variable de transacciones del mes cargada
+    if 'df_mes_actual' in locals() and not df_mes_actual.empty:
+        df_patrones = df_mes_actual.copy()
+        
+        # Convertimos la fecha a formato datetime
+        df_patrones['fecha_dt'] = pd.to_datetime(df_patrones['fecha'])
+        df_patrones['dia_semana'] = df_patrones['fecha_dt'].dt.day_name()
+        df_patrones['dia_numero'] = df_patrones['fecha_dt'].dt.day
+
+        # Traducimos los días al español
+        dias_es = {
+            'Monday': 'Lunes', 'Tuesday': 'Martes', 'Wednesday': 'Miércoles', 
+            'Thursday': 'Jueves', 'Friday': 'Viernes', 'Saturday': 'Sábado', 'Sunday': 'Domingo'
+        }
+        df_patrones['dia_semana'] = df_patrones['dia_semana'].map(dias_es)
+
+        gasto_total = df_patrones['monto'].sum()
+        gasto_primera_semana = df_patrones[df_patrones['dia_numero'] <= 7]['monto'].sum()
+        porcentaje_primera = (gasto_primera_semana / gasto_total) * 100 if gasto_total > 0 else 0
+
+        col_p1, col_p2 = st.columns(2)
+
+        with col_p1:
+            st.markdown("### ⏳ Ritmo de Gasto")
+            if porcentaje_primera > 40:
+                st.error(f"🚨 **Alerta de inicio de mes:** Te gastaste el **{porcentaje_primera:.0f}%** de tu dinero en los primeros 7 días. Cuidado con dosificar mejor para no llegar apretado a fin de mes.")
+            else:
+                st.success(f"✅ **Buen ritmo:** Tu gasto en la primera semana fue del **{porcentaje_primera:.0f}%**. Mantener este nivel indica un excelente control de flujo de caja inicial.")
+
+        with col_p2:
+            st.markdown("### 📅 Días de Riesgo")
+            gasto_por_dia = df_patrones.groupby('dia_semana')['monto'].sum().sort_values(ascending=False)
+            
+            if not gasto_por_dia.empty:
+                dia_top = gasto_por_dia.index[0]
+                porcentaje_top = (gasto_por_dia.iloc[0] / gasto_total) * 100
+                st.warning(f"💸 **Fuga recurrente:** Los **{dia_top}s** son tus días de mayor gasto. Representan el **{porcentaje_top:.0f}%** de todas tus salidas de dinero de este mes.")
+
+        # Análisis específico para Comida Fuera
+        df_comida = df_patrones[df_patrones['categoria'].str.lower().str.contains('comida fuera', na=False)]
+        if not df_comida.empty:
+            dia_comida = df_comida.groupby('dia_semana')['monto'].sum().sort_values(ascending=False).index[0]
+            st.info(f"🍔 **Patrón de Antojos:** La mayor parte de tus gastos en 'Comida fuera' ocurren los **{dia_comida}s**. Si quieres optimizar tus ahorros, este es el día clave para planear algo en casa.")
+            
+    else:
+        st.info("Aún no hay suficientes transacciones registradas este mes para activar el detector de patrones.")
 
 st.sidebar.title("Navegación")
 st.sidebar.info(
