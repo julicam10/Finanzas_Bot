@@ -167,97 +167,97 @@ with pestana_trans:
             # --- 2. PANEL DESPLEGABLE DE EDICIÓN (Transacciones) ---
             with st.expander("✏️ Editar o eliminar un gasto"):
             
-            # 1. Limpieza de estado pendiente al guardar o eliminar
-            if "limpiar_seleccion_trans" in st.session_state and st.session_state["limpiar_seleccion_trans"]:
-                st.session_state["sel_trans_edit"] = "-- Selecciona un gasto --"
-                st.session_state["limpiar_seleccion_trans"] = False
+                # 1. Limpieza de estado pendiente al guardar o eliminar
+                if "limpiar_seleccion_trans" in st.session_state and st.session_state["limpiar_seleccion_trans"]:
+                    st.session_state["sel_trans_edit"] = "-- Selecciona un gasto --"
+                    st.session_state["limpiar_seleccion_trans"] = False
 
-            if "sel_trans_edit" not in st.session_state:
-                st.session_state["sel_trans_edit"] = "-- Selecciona un gasto --"
-                
-            # 2. Construimos etiquetas únicas: ID | Fecha | Concepto | Monto
-            opciones_trans = []
-            for _, row in df_mes_actual.iterrows():
-                etiqueta = f"ID {row['id']} | {row['fecha']} | {row['concepto']} | $ {row['monto']:,.0f}".replace(",", ".")
-                opciones_trans.append((row['id'], etiqueta))
-            
-            etiquetas_trans = [op[1] for op in opciones_trans]
-            etiquetas_opciones_t = ["-- Selecciona un gasto --"] + etiquetas_trans
-            
-            # 3. Función que refresca los datos al cambiar la selección
-            def actualizar_campos_transaccion():
-                seleccion = st.session_state.get("sel_trans_edit", "-- Selecciona un gasto --")
-                if seleccion and seleccion != "-- Selecciona un gasto --":
-                    id_sel = next(op[0] for op in opciones_trans if op[1] == seleccion)
-                    fila_trans = df_mes_actual[df_mes_actual['id'] == id_sel].iloc[0]
+                if "sel_trans_edit" not in st.session_state:
+                    st.session_state["sel_trans_edit"] = "-- Selecciona un gasto --"
                     
-                    # Actualizamos el session_state con los datos reales
-                    st.session_state["edit_fecha_trans"] = str(fila_trans['fecha'])
-                    st.session_state["edit_concepto_trans"] = str(fila_trans['concepto'])
-                    st.session_state["edit_cat_trans"] = str(fila_trans['categoria'])
-                    st.session_state["edit_monto_trans"] = int(fila_trans['monto'])
-                    st.session_state["edit_metodo_trans"] = str(fila_trans['metodo_pago'])
-                else:
-                    # Limpiamos si no hay selección
-                    st.session_state["edit_fecha_trans"] = ""
-                    st.session_state["edit_concepto_trans"] = ""
-                    st.session_state["edit_cat_trans"] = ""
-                    st.session_state["edit_monto_trans"] = 0
-                    st.session_state["edit_metodo_trans"] = ""
+                # 2. Construimos etiquetas únicas: ID | Fecha | Concepto | Monto
+                opciones_trans = []
+                for _, row in df_mes_actual.iterrows():
+                    etiqueta = f"ID {row['id']} | {row['fecha']} | {row['concepto']} | $ {row['monto']:,.0f}".replace(",", ".")
+                    opciones_trans.append((row['id'], etiqueta))
+                
+                etiquetas_trans = [op[1] for op in opciones_trans]
+                etiquetas_opciones_t = ["-- Selecciona un gasto --"] + etiquetas_trans
+                
+                # 3. Función que refresca los datos al cambiar la selección
+                def actualizar_campos_transaccion():
+                    seleccion = st.session_state.get("sel_trans_edit", "-- Selecciona un gasto --")
+                    if seleccion and seleccion != "-- Selecciona un gasto --":
+                        id_sel = next(op[0] for op in opciones_trans if op[1] == seleccion)
+                        fila_trans = df_mes_actual[df_mes_actual['id'] == id_sel].iloc[0]
+                        
+                        # Actualizamos el session_state con los datos reales
+                        st.session_state["edit_fecha_trans"] = str(fila_trans['fecha'])
+                        st.session_state["edit_concepto_trans"] = str(fila_trans['concepto'])
+                        st.session_state["edit_cat_trans"] = str(fila_trans['categoria'])
+                        st.session_state["edit_monto_trans"] = int(fila_trans['monto'])
+                        st.session_state["edit_metodo_trans"] = str(fila_trans['metodo_pago'])
+                    else:
+                        # Limpiamos si no hay selección
+                        st.session_state["edit_fecha_trans"] = ""
+                        st.session_state["edit_concepto_trans"] = ""
+                        st.session_state["edit_cat_trans"] = ""
+                        st.session_state["edit_monto_trans"] = 0
+                        st.session_state["edit_metodo_trans"] = ""
 
-            # 4. El selectbox conectado a la función on_change
-            trans_sel_etiqueta = st.selectbox(
-                "Selecciona el gasto a modificar:", 
-                etiquetas_opciones_t, 
-                key="sel_trans_edit",
-                on_change=actualizar_campos_transaccion
-            )
-            
-            # Inicializamos keys si no existen para evitar errores visuales
-            if "edit_fecha_trans" not in st.session_state: st.session_state["edit_fecha_trans"] = ""
-            if "edit_concepto_trans" not in st.session_state: st.session_state["edit_concepto_trans"] = ""
-            if "edit_cat_trans" not in st.session_state: st.session_state["edit_cat_trans"] = ""
-            if "edit_metodo_trans" not in st.session_state: st.session_state["edit_metodo_trans"] = ""
-            if "edit_monto_trans" not in st.session_state: st.session_state["edit_monto_trans"] = 0
-            
-            if trans_sel_etiqueta and trans_sel_etiqueta != "-- Selecciona un gasto --":
-                # Extraemos el ID real a partir de la selección
-                id_seleccionado_t = next(op[0] for op in opciones_trans if op[1] == trans_sel_etiqueta)
+                # 4. El selectbox conectado a la función on_change
+                trans_sel_etiqueta = st.selectbox(
+                    "Selecciona el gasto a modificar:", 
+                    etiquetas_opciones_t, 
+                    key="sel_trans_edit",
+                    on_change=actualizar_campos_transaccion
+                )
                 
-                col_g1, col_g2 = st.columns(2)
-                with col_g1:
-                    # 5. Inputs SIN el parámetro 'value', solo conectados por su 'key'
-                    nueva_fecha_t = st.text_input("Fecha (YYYY-MM-DD)", key="edit_fecha_trans")
-                    nuevo_concepto_t = st.text_input("Concepto", key="edit_concepto_trans")
-                    nueva_categoria_t = st.text_input("Categoría", key="edit_cat_trans")
-                with col_g2:
-                    nuevo_monto_t = st.number_input("Monto (COP)", step=10000, format="%d", key="edit_monto_trans")
-                    nuevo_metodo_t = st.text_input("Método de Pago", key="edit_metodo_trans")
+                # Inicializamos keys si no existen para evitar errores visuales
+                if "edit_fecha_trans" not in st.session_state: st.session_state["edit_fecha_trans"] = ""
+                if "edit_concepto_trans" not in st.session_state: st.session_state["edit_concepto_trans"] = ""
+                if "edit_cat_trans" not in st.session_state: st.session_state["edit_cat_trans"] = ""
+                if "edit_metodo_trans" not in st.session_state: st.session_state["edit_metodo_trans"] = ""
+                if "edit_monto_trans" not in st.session_state: st.session_state["edit_monto_trans"] = 0
+                
+                if trans_sel_etiqueta and trans_sel_etiqueta != "-- Selecciona un gasto --":
+                    # Extraemos el ID real a partir de la selección
+                    id_seleccionado_t = next(op[0] for op in opciones_trans if op[1] == trans_sel_etiqueta)
                     
-                col_gb1, col_gb2 = st.columns(2)
-                with col_gb1:
-                    if st.button("Guardar cambios", use_container_width=True, key="btn_guardar_cambios_transacciones"):
-                        query = """
-                            UPDATE transacciones 
-                            SET fecha = %s, concepto = %s, categoria = %s, monto = %s, metodo_pago = %s 
-                            WHERE id = %s
-                        """
-                        params = (nueva_fecha_t, nuevo_concepto_t, nueva_categoria_t, float(nuevo_monto_t), nuevo_metodo_t, int(id_seleccionado_t))
-                        ejecutar_sql(query, params)
-                        st.success("¡Transacción actualizada correctamente!")
+                    col_g1, col_g2 = st.columns(2)
+                    with col_g1:
+                        # 5. Inputs SIN el parámetro 'value', solo conectados por su 'key'
+                        nueva_fecha_t = st.text_input("Fecha (YYYY-MM-DD)", key="edit_fecha_trans")
+                        nuevo_concepto_t = st.text_input("Concepto", key="edit_concepto_trans")
+                        nueva_categoria_t = st.text_input("Categoría", key="edit_cat_trans")
+                    with col_g2:
+                        nuevo_monto_t = st.number_input("Monto (COP)", step=10000, format="%d", key="edit_monto_trans")
+                        nuevo_metodo_t = st.text_input("Método de Pago", key="edit_metodo_trans")
                         
-                        # Activa la bandera para limpiar los campos
-                        st.session_state["limpiar_seleccion_trans"] = True
-                        st.rerun()
-                with col_gb2:
-                    if st.button("Eliminar Gasto", type="primary", use_container_width=True, key="btn_eliminar_gasto_transacciones"):
-                        query = "DELETE FROM transacciones WHERE id = %s"
-                        ejecutar_sql(query, (int(id_seleccionado_t),))
-                        st.warning("¡Transacción eliminada!")
-                        
-                        # Activa la bandera para limpiar los campos
-                        st.session_state["limpiar_seleccion_trans"] = True
-                        st.rerun()
+                    col_gb1, col_gb2 = st.columns(2)
+                    with col_gb1:
+                        if st.button("Guardar cambios", use_container_width=True, key="btn_guardar_cambios_transacciones"):
+                            query = """
+                                UPDATE transacciones 
+                                SET fecha = %s, concepto = %s, categoria = %s, monto = %s, metodo_pago = %s 
+                                WHERE id = %s
+                            """
+                            params = (nueva_fecha_t, nuevo_concepto_t, nueva_categoria_t, float(nuevo_monto_t), nuevo_metodo_t, int(id_seleccionado_t))
+                            ejecutar_sql(query, params)
+                            st.success("¡Transacción actualizada correctamente!")
+                            
+                            # Activa la bandera para limpiar los campos
+                            st.session_state["limpiar_seleccion_trans"] = True
+                            st.rerun()
+                    with col_gb2:
+                        if st.button("Eliminar Gasto", type="primary", use_container_width=True, key="btn_eliminar_gasto_transacciones"):
+                            query = "DELETE FROM transacciones WHERE id = %s"
+                            ejecutar_sql(query, (int(id_seleccionado_t),))
+                            st.warning("¡Transacción eliminada!")
+                            
+                            # Activa la bandera para limpiar los campos
+                            st.session_state["limpiar_seleccion_trans"] = True
+                            st.rerun()
             
             # --- 3. GRÁFICA INTACTA ---
             st.subheader("Gastos por categoría")
