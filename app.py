@@ -1224,7 +1224,7 @@ with pestana_inversiones:
         st.info("Aún no tienes inversiones registradas. Usa el formulario de arriba para agregar tu primer activo (ej. VOO o TSMC).")
 
 with pestana_patrones:
-    st.subheader("🕵️ Detector de Patrones y Hábitos")
+    st.subheader("🕵️ Detector de patrones y hábitos")
     st.markdown("Aquí analizamos el comportamiento de tus gastos para mostrarte alertas basadas en tus costumbres de consumo.")
 
     # Verificamos si tienes la variable de transacciones del mes cargada
@@ -1251,14 +1251,14 @@ with pestana_patrones:
         col_p1, col_p2 = st.columns(2)
 
         with col_p1:
-            st.markdown("### ⏳ Ritmo de Gasto")
+            st.markdown("### ⏳ Ritmo de gasto")
             if porcentaje_primera > 40:
                 st.error(f"🚨 **Alerta de inicio de mes:** Te gastaste el **{porcentaje_primera:.0f}%** de tu dinero en los primeros 7 días. Cuidado con dosificar mejor para no llegar apretado a fin de mes.")
             else:
                 st.success(f"✅ **Buen ritmo:** Tu gasto en la primera semana fue del **{porcentaje_primera:.0f}%**. Mantener este nivel indica un excelente control de flujo de caja inicial.")
 
         with col_p2:
-            st.markdown("### 📅 Días de Riesgo")
+            st.markdown("### 📅 Días de riesgo")
             gasto_por_dia = df_patrones.groupby('dia_semana')['monto'].sum().sort_values(ascending=False)
             
             if not gasto_por_dia.empty:
@@ -1275,12 +1275,12 @@ with pestana_patrones:
         st.markdown("---")
 
         # --- SECCIÓN 2: ANÁLISIS AVANZADO (Frecuencia y Quincenas) ---
-        st.subheader("📊 Análisis Avanzado de Comportamiento")
+        st.subheader("📊 Análisis avanzado de comportamiento")
         
         col_a1, col_a2 = st.columns(2)
 
         with col_a1:
-            st.markdown("### 🔄 Frecuencia por Categoría")
+            st.markdown("### 🔄 Frecuencia por categoría")
             # Agrupamos para contar cuántas transacciones haces por categoría y cuánto suman
             frecuencia_cat = df_patrones.groupby('categoria').agg(
                 transacciones=('monto', 'count'),
@@ -1294,7 +1294,7 @@ with pestana_patrones:
                 st.info("No hay suficientes datos de categorías aún.")
 
         with col_a2:
-            st.markdown("### ⚖️ Comparativa de Quincenas")
+            st.markdown("### ⚖️ Comparativa de quincenas")
             # Dividimos el mes en quincena 1 (días 1 al 15) y quincena 2 (del 16 en adelante)
             q1 = df_patrones[df_patrones['dia_numero'] <= 15]['monto'].sum()
             q2 = df_patrones[df_patrones['dia_numero'] > 15]['monto'].sum()
@@ -1330,7 +1330,11 @@ with pestana_control:
             
             # Unimos presupuesto vs real
             comparativa = pd.merge(df_presupuestos, gastos_por_cat, on='categoria', how='left', suffixes=('_presupuestado', '_real'))
-            comparativa['monto_real'] = comparativa['monto_real'].fillna(0)
+                if not comparativa.empty:
+                    if 'monto_real' not in comparativa.columns:
+                        comparativa['monto_real'] = 0.0
+
+                    comparativa['monto_real'] = comparativa['monto_real'].fillna(0)
             
             # Renombramos columnas de forma segura según tu estructura de BD
             col_p = next((c for c in ['monto', 'presupuesto', 'limite'] if c in comparativa.columns), None)
