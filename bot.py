@@ -35,10 +35,12 @@ def clasificar_gasto(concepto):
     
     if any(w in c_lower for w in ["s&p500", "tsmc"]):
         return "Inversión"
-    elif any(w in c_lower for w in ["fondeloitte", "ahorro personal", "ahorro ropa", "ahorro viajes"]):
-        return "Ahorro"
+    elif any(w in c_lower for w in ["ahorro viajes"]):
+        return "Ahorro viajes"
+    elif any(w in c_lower for w in ["fondeloitte"]):
+        return "Ahorro fondeloitte"
     elif any(w in c_lower for w in ["arriendo"]):
-        return "Casa / Obligaciones"
+        return "Arriendo"
     elif any(w in c_lower for w in ["huevos", "proteina", "carne", "d1", "ara", "éxito", "exito", "frutas", "verduras", "pollo"]):
         return "Mercado"
     elif any(w in c_lower for w in ["oficina", "transmilenio", "almuerzo", "desayuno"]):
@@ -46,18 +48,30 @@ def clasificar_gasto(concepto):
     elif any(w in c_lower for w in ["carro", "gasolina", "arreglo", "llaves", "llantas", "parqueadero", "peaje", "lavadero", "soat"]):
         return "Carro"
     elif any(w in c_lower for w in ["hamburguesa", "pizza", "papas king", "comida fuera"]):
-        return "Comida fuera"
+        return "Salidas a comer"
+    elif any(w in c_lower for w in ["gimnasio", "gym"]):
+        return "Gimnasio"
+    elif any(w in c_lower for w in ["barberia"]):
+        return "Barbería"
     elif any(w in c_lower for w in ["barberia", "gimnasio", "uñas"]):
         return "Bienestar y Cuidado"
     elif any(w in c_lower for w in ["comida alma", "arena alma"]):
-        return "Mascota (Alma)"
+        return "Alma"
     elif any(w in c_lower for w in ["netflix", "youtube", "google fotos"]):
         return "Suscripciones"
-    elif any(w in c_lower for w in ["paquete de datos", "datos"]):
-        return "Servicios"
-    elif any(w in c_lower for w in ["crédito hipotecario", "credito hipotecario", "pago ipad", "t.c nu", "t.c bancolombia"]):
-        return "Pago deudas"
-    elif any(w in c_lower for w in ["salida con amigos", "transporte", "pasaje", "cine", "salida"]):
+    elif any(w in c_lower for w in ["paquete de datos", "datos", "internet"]):
+        return "Paquete de datos"
+    elif any(w in c_lower for w in ["crédito hipotecario", "credito hipotecario"]):
+        return "Crédito hipotecario"
+    elif any(w in c_lower for w in ["pago ipad", "ipad"]):
+        return "Pago iPad"
+    elif any(w in c_lower for w in ["t.c nu", "tarjeta nu"]):
+        return "T.C Nu"
+    elif any(w in c_lower for w in ["t.c bancolombia", "tarjeta bancolombia"]):
+        return "T.C Bancolombia"
+    elif any(w in c_lower for w in ["deuda carro"]):
+        return "Abono carro"
+    elif any(w in c_lower for w in ["salida con amigos", "uñas", "areglo uñas", "transporte", "pasaje", "cine", "salida"]):
         return "Gastos del mes"
     else:
         return "Gastos del mes"
