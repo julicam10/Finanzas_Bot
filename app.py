@@ -1321,33 +1321,43 @@ with pestana_patrones:
 with pestana_control:
     st.subheader("🎯 Radar de Desviación Presupuestaria")
 
-    # Validamos que existan tanto los presupuestos como los gastos del mes actual
-    if not df_presupuestos.empty and 'df_mes_actual' in locals() and not df_mes_actual.empty:
+    # 1. Identificar el mes actual
+    from datetime import datetime
+    mes_actual_radar = datetime.now().strftime("%Y-%m")
+
+    # 2. Filtrar SOLO los presupuestos de este mes para evitar duplicados históricos
+    if not df_presupuestos.empty:
+        df_presup_radar = df_presupuestos[df_presupuestos['mes'] == mes_actual_radar].copy()
+    else:
+        df_presup_radar = pd.DataFrame()
+
+    # 3. Validamos que existan tanto presupuestos de este mes como gastos del mes actual
+    if not df_presup_radar.empty and 'df_mes_actual' in locals() and not df_mes_actual.empty:
         
-        # 1. Agrupar gastos reales del mes por categoría
+        # Agrupar gastos reales del mes por categoría
         gastos_por_cat = df_mes_actual.groupby('categoria')['monto'].sum().reset_index()
         gastos_por_cat = gastos_por_cat.rename(columns={'monto': 'gasto_real'})
 
-        # 2. Unir presupuestos con gastos reales (Left join)
-        comparativa = pd.merge(df_presupuestos, gastos_por_cat, on='categoria', how='left')
+        # Unir SOLO presupuestos del mes con gastos reales
+        comparativa = pd.merge(df_presup_radar, gastos_por_cat, on='categoria', how='left')
 
-        # 3. Limpiar valores nulos y convertirlos a 0 para que la matemática funcione
+        # Limpiar valores nulos y convertirlos a 0
         if 'gasto_real' not in comparativa.columns:
             comparativa['gasto_real'] = 0.0
             
         comparativa['gasto_real'] = comparativa['gasto_real'].fillna(0)
         comparativa['limite'] = comparativa['limite'].fillna(0)
 
-        # 4. Cálculos matemáticos limpios
+        # Cálculos matemáticos limpios
         comparativa['Desviación'] = comparativa['limite'] - comparativa['gasto_real']
         
-        # Calculamos el % de ejecución evitando el error de división por cero
+        # Calculamos el % de ejecución
         comparativa['% Ejecución'] = comparativa.apply(
             lambda row: (row['gasto_real'] / row['limite'] * 100) if row['limite'] > 0 else 0,
             axis=1
         )
 
-        # 5. Renderizado visual avanzado con st.column_config
+        # Renderizado visual avanzado
         st.dataframe(
             comparativa[['categoria', 'limite', 'gasto_real', 'Desviación', '% Ejecución']],
             use_container_width=True,
@@ -1366,7 +1376,7 @@ with pestana_control:
             }
         )
     else:
-        st.info("Faltan datos de presupuestos o transacciones para generar el radar este mes.")
+        st.info(f"Faltan datos de presupuestos o transacciones para generar el radar en {mes_actual_radar}.")
 
 st.sidebar.title("Navegación")
 st.sidebar.info(
