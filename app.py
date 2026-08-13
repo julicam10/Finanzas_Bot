@@ -69,20 +69,24 @@ try:
 except:
     df_log = pd.DataFrame()
 
-# --- BLOQUE DE KPIS PRINCIPALES SEGURO ---
+# --- BLOQUE DE KPIS PRINCIPALES BLINDADO ---
 salario_actual = 6427740 
-gasto_actual = df_mes_actual['monto'].sum() if 'df_mes_actual' in locals() and not df_mes_actual.empty else 0
+gasto_actual = float(df_mes_actual['monto'].sum()) if 'df_mes_actual' in locals() and not df_mes_actual.empty else 0.0
 dinero_disponible = salario_actual - gasto_actual
 
-total_patrimonio = df_patrimonio['valor'].sum() if 'df_patrimonio' in locals() and not df_patrimonio.empty and 'valor' in df_patrimonio.columns else 0
+total_patrimonio = 0.0
+if 'df_patrimonio' in locals() and not df_patrimonio.empty:
+    posibles_col_pat = ['valor', 'monto', 'total']
+    col_pat = next((c for c in posibles_col_pat if c in df_patrimonio.columns), None)
+    if col_pat:
+        total_patrimonio = float(pd.to_numeric(df_patrimonio[col_pat], errors='coerce').sum())
 
-# Buscamos de forma segura la columna de deudas sin importar cómo se llame
-total_deudas = 0
+total_deudas = 0.0
 if 'df_deudas' in locals() and not df_deudas.empty:
-    posibles_columnas = ['saldo_pendiente', 'monto', 'valor', 'deuda', 'saldo']
-    col_encontrada = next((col for col in posibles_columnas if col in df_deudas.columns), None)
-    if col_encontrada:
-        total_deudas = df_deudas[col_encontrada].sum()
+    posibles_col_deudas = ['saldo_pendiente', 'monto', 'valor', 'deuda', 'saldo']
+    col_deuda = next((c for c in posibles_col_deudas if c in df_deudas.columns), None)
+    if col_deuda:
+        total_deudas = float(pd.to_numeric(df_deudas[col_deuda], errors='coerce').sum())
 
 col_k1, col_k2, col_k3, col_k4 = st.columns(4)
 
