@@ -1330,10 +1330,9 @@ with pestana_control:
             
             # Unimos presupuesto vs real
             comparativa = pd.merge(df_presupuestos, gastos_por_cat, on='categoria', how='left', suffixes=('_presupuestado', '_real'))
-                if not comparativa.empty:
-                    if 'monto_real' not in comparativa.columns:
-                        comparativa['monto_real'] = 0.0
-
+            if not comparativa.empty:
+                if 'monto_real' not in comparativa.columns:
+                    comparativa['monto_real'] = 0.0
                     comparativa['monto_real'] = comparativa['monto_real'].fillna(0)
             
             # Renombramos columnas de forma segura según tu estructura de BD
