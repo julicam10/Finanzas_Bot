@@ -69,23 +69,24 @@ try:
 except:
     df_log = pd.DataFrame()
 
-# --- BLOQUE DE KPIS PRINCIPALES BLINDADO ---
+# --- 3. BLOQUE DE KPIS PRINCIPALES CORREGIDO ---
 salario_actual = 6427740 
-gasto_actual = float(df_mes_actual['monto'].sum()) if 'df_mes_actual' in locals() and not df_mes_actual.empty else 0.0
+gasto_actual = float(df_mes_actual['monto'].sum()) if not df_mes_actual.empty and 'monto' in df_mes_actual.columns else 0.0
 dinero_disponible = salario_actual - gasto_actual
 
+# Aquí usamos df_inversiones (que es el nombre real que definiste en tu carga inicial)
 total_patrimonio = 0.0
-if 'df_patrimonio' in locals() and not df_patrimonio.empty:
-    posibles_col_pat = ['valor', 'monto', 'total']
-    col_pat = next((c for c in posibles_col_pat if c in df_patrimonio.columns), None)
-    if col_pat:
-        total_patrimonio = float(pd.to_numeric(df_patrimonio[col_pat], errors='coerce').sum())
+if not df_inversiones.empty:
+    # Ajusta 'monto_invertido' si en tu BD la columna se llama diferente
+    col_pat = 'monto_invertido' if 'monto_invertido' in df_inversiones.columns else 'monto'
+    if col_pat in df_inversiones.columns:
+        total_patrimonio = float(pd.to_numeric(df_inversiones[col_pat], errors='coerce').sum())
 
 total_deudas = 0.0
-if 'df_deudas' in locals() and not df_deudas.empty:
-    posibles_col_deudas = ['saldo_pendiente', 'monto', 'valor', 'deuda', 'saldo']
-    col_deuda = next((c for c in posibles_col_deudas if c in df_deudas.columns), None)
-    if col_deuda:
+if not df_deudas.empty:
+    # Ajusta 'monto_total' si en tu BD la columna se llama diferente
+    col_deuda = 'monto_total' if 'monto_total' in df_deudas.columns else 'monto'
+    if col_deuda in df_deudas.columns:
         total_deudas = float(pd.to_numeric(df_deudas[col_deuda], errors='coerce').sum())
 
 col_k1, col_k2, col_k3, col_k4 = st.columns(4)
@@ -98,8 +99,6 @@ with col_k3:
     st.metric(label="🏦 Patrimonio Actual", value=f"$ {total_patrimonio:,.0f}".replace(",", "."))
 with col_k4:
     st.metric(label="💳 Deudas Totales", value=f"$ {total_deudas:,.0f}".replace(",", "."))
-
-st.markdown("---")
 
 # Pestañas de navegación organizadas
 pestana_trans, pestana_historial, pestana_presupuestos, pestana_deudas, pestana_metas, pestana_inversiones, pestana_patrones = st.tabs([
