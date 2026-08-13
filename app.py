@@ -108,7 +108,7 @@ with col_k4:
 st.markdown("---")
 
 # Pestañas de navegación organizadas
-pestana_trans, pestana_historial, pestana_presupuestos, pestana_deudas, pestana_metas, pestana_inversiones, pestana_patrones, pestana_control, pestana_salud = st.tabs([
+pestana_trans, pestana_historial, pestana_presupuestos, pestana_deudas, pestana_metas, pestana_inversiones, pestana_patrones, pestana_control = st.tabs([
     "📝 Gastos del mes", 
     "📅 Historial de gastos",
     "🎯 Presupuestos", 
@@ -116,8 +116,7 @@ pestana_trans, pestana_historial, pestana_presupuestos, pestana_deudas, pestana_
     "💰 Ahorro",
     "💎 Patrimonio & Inversiones",
     "📊 Análisis financiero",
-    "📀 Control presupuestario", 
-    "📈 Salud financiera"
+    "📀 Control de presupuesto", 
 ])
 
 with pestana_trans:
@@ -1322,83 +1321,52 @@ with pestana_patrones:
 with pestana_control:
     st.subheader("🎯 Radar de Desviación Presupuestaria")
 
-    if not df_presupuestos.empty and not df_transacciones.empty:
-        # Asegúrate de que ambas tablas tengan una columna de categoría en común (ej. 'categoria')
-        if 'categoria' in df_presupuestos.columns and 'categoria' in df_transacciones.columns:
-            # Sumamos los gastos reales por categoría en el mes actual
-            gastos_por_cat = df_mes_actual.groupby('categoria')['monto'].sum().reset_index()
-            
-            # Unimos presupuesto vs real
-            comparativa = pd.merge(df_presupuestos, gastos_por_cat, on='categoria', how='left', suffixes=('_presupuestado', '_real'))
-            if not comparativa.empty:
-                if 'monto_real' not in comparativa.columns:
-                    comparativa['monto_real'] = 0.0
-                    comparativa['monto_real'] = comparativa['monto_real'].fillna(0)
-            
-            # Renombramos columnas de forma segura según tu estructura de BD
-            col_p = next((c for c in ['monto', 'presupuesto', 'limite'] if c in comparativa.columns), None)
-            
-            if col_p:
-                comparativa['Desviación'] = comparativa['monto_real'] - comparativa[col_p]
-                comparativa['% Ejecución'] = (comparativa['monto_real'] / comparativa[col_p]) * 100
-                
-                st.dataframe(comparativa[['categoria', col_p, 'monto_real', 'Desviación', '% Ejecución']], use_container_width=True)
-            else:
-                st.warning("No se encontró la columna de monto límite en la tabla de presupuestos.")
-        else:
-            st.info("Las tablas 'presupuestos' y 'transacciones' deben compartir una columna llamada 'categoria'.")
-    else:
-        st.info("Faltan datos en las tablas de presupuestos o transacciones para generar el radar.")
-
-with pestana_salud:
-
-    st.subheader("💳 Salud de Endeudamiento")
-
-    # Verificamos que existan deudas con cuota mensual
-    if not df_deudas.empty:
-        posibles_col_cuota = ['cuota_mensual', 'cuota', 'pago_mensual']
-        col_cuota = next((c for c in posibles_col_cuota if c in df_deudas.columns), None)
+    # Validamos que existan tanto los presupuestos como los gastos del mes actual
+    if not df_presupuestos.empty and 'df_mes_actual' in locals() and not df_mes_actual.empty:
         
-        if col_cuota:
-            total_cuotas_mes = float(pd.to_numeric(df_deudas[col_cuota], errors='coerce').sum())
-            porcentaje_endeudamiento = (total_cuotas_mes / salario_actual) * 100
+        # 1. Agrupar gastos reales del mes por categoría
+        gastos_por_cat = df_mes_actual.groupby('categoria')['monto'].sum().reset_index()
+        gastos_por_cat = gastos_por_cat.rename(columns={'monto': 'gasto_real'})
+
+        # 2. Unir presupuestos con gastos reales (Left join)
+        comparativa = pd.merge(df_presupuestos, gastos_por_cat, on='categoria', how='left')
+
+        # 3. Limpiar valores nulos y convertirlos a 0 para que la matemática funcione
+        if 'gasto_real' not in comparativa.columns:
+            comparativa['gasto_real'] = 0.0
             
-            col_e1, col_e2 = st.columns(2)
-            with col_e1:
-                st.metric(label="Total Cuotas Mensuales", value=f"$ {total_cuotas_mes:,.0f}".replace(",", "."))
-            with col_e2:
-                st.metric(label="Compromiso de Ingresos", value=f"{porcentaje_endeudamiento:.1f}%")
-                
-            if porcentaje_endeudamiento <= 30:
-                st.success("🟢 Tu nivel de endeudamiento es saludable (menor al 30% de tus ingresos).")
-            elif porcentaje_endeudamiento <= 40:
-                st.warning("🟡 Estás en zona de alerta (entre 30% y 40% de tus ingresos en deudas).")
-            else:
-                st.error("🔴 ¡Riesgo alto! Estás destinando más del 40% de tus ingresos a deudas.")
-        else:
-            st.info("Añade una columna de cuota mensual en tu tabla de deudas para activar este indicador con precisión.")
-    else:
-        st.info("No hay registros de deudas actualmente.")
+        comparativa['gasto_real'] = comparativa['gasto_real'].fillna(0)
+        comparativa['limite'] = comparativa['limite'].fillna(0)
 
-    st.subheader("📅 Estacionalidad de Gastos por Mes")
+        # 4. Cálculos matemáticos limpios
+        comparativa['Desviación'] = comparativa['limite'] - comparativa['gasto_real']
+        
+        # Calculamos el % de ejecución evitando el error de división por cero
+        comparativa['% Ejecución'] = comparativa.apply(
+            lambda row: (row['gasto_real'] / row['limite'] * 100) if row['limite'] > 0 else 0,
+            axis=1
+        )
 
-    if not df_transacciones.empty and 'fecha' in df_transacciones.columns and 'monto' in df_transacciones.columns:
-        df_temp = df_transacciones.copy()
-        df_temp['fecha_dt'] = pd.to_datetime(df_temp['fecha'], errors='coerce')
-        df_temp['Mes_Num'] = df_temp['fecha_dt'].dt.month
-        df_temp['Mes_Nombre'] = df_temp['fecha_dt'].dt.strftime('%B')
-        
-        # Filtramos solo gastos (asumiendo montos negativos o una columna de tipo)
-        # Si tus gastos son positivos, puedes omitir el filtro de signo o ajustarlo según tu BD
-        gastos_mensuales = df_temp.groupby(['Mes_Num', 'Mes_Nombre'])['monto'].sum().reset_index()
-        gastos_mensuales = gastos_mensuales.sort_values('Mes_Num')
-        
-        if not gastos_mensuales.empty:
-            st.bar_chart(data=gastos_mensuales, x='Mes_Nombre', y='monto')
-        else:
-            st.info("No hay suficientes datos históricos para calcular la estacionalidad.")
+        # 5. Renderizado visual avanzado con st.column_config
+        st.dataframe(
+            comparativa[['categoria', 'limite', 'gasto_real', 'Desviación', '% Ejecución']],
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "categoria": st.column_config.TextColumn("Categoría"),
+                "limite": st.column_config.NumberColumn("Presupuestado", format="$ %d"),
+                "gasto_real": st.column_config.NumberColumn("Gasto Real", format="$ %d"),
+                "Desviación": st.column_config.NumberColumn("Desviación (Restante)", format="$ %d"),
+                "% Ejecución": st.column_config.ProgressColumn(
+                    "% Ejecución", 
+                    format="%d%%", 
+                    min_value=0, 
+                    max_value=100
+                )
+            }
+        )
     else:
-        st.info("La tabla de transacciones necesita datos válidos de fecha y monto.")
+        st.info("Faltan datos de presupuestos o transacciones para generar el radar este mes.")
 
 st.sidebar.title("Navegación")
 st.sidebar.info(
