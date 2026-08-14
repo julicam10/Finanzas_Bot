@@ -108,15 +108,15 @@ with col_k4:
 st.markdown("---")
 
 # Pestañas de navegación organizadas
-pestana_trans, pestana_historial, pestana_presupuestos, pestana_deudas, pestana_metas, pestana_inversiones, pestana_patrones, pestana_control = st.tabs([
+pestana_trans, pestana_historial, pestana_presupuestos, pestana_control, pestana_deudas, pestana_metas, pestana_inversiones, pestana_patrones = st.tabs([
     "📝 Gastos del mes", 
     "📅 Historial de gastos",
-    "🎯 Presupuestos", 
-    "💳 Deudas", 
+    "🎯 Presupuestos",
+    "📀 Control de presupuesto",
+    "💳 Deudas",
     "💰 Ahorro",
     "💎 Patrimonio & Inversiones",
-    "📊 Análisis financiero",
-    "📀 Control de presupuesto", 
+    "📊 Análisis financiero" 
 ])
 
 with pestana_trans:
@@ -674,6 +674,66 @@ with pestana_presupuestos:
     else:
         st.info("No hay presupuestos configurados todavía.")
 
+with pestana_control:
+    st.subheader("🎯 Radar de desviación presupuestaria")
+
+    # 1. Identificar el mes actual
+    from datetime import datetime
+    mes_actual_radar = datetime.now().strftime("%Y-%m")
+
+    # 2. Filtrar SOLO los presupuestos de este mes para evitar duplicados históricos
+    if not df_presupuestos.empty:
+        df_presup_radar = df_presupuestos[df_presupuestos['mes'] == mes_actual_radar].copy()
+    else:
+        df_presup_radar = pd.DataFrame()
+
+    # 3. Validamos que existan tanto presupuestos de este mes como gastos del mes actual
+    if not df_presup_radar.empty and 'df_mes_actual' in locals() and not df_mes_actual.empty:
+        
+        # Agrupar gastos reales del mes por categoría
+        gastos_por_cat = df_mes_actual.groupby('categoria')['monto'].sum().reset_index()
+        gastos_por_cat = gastos_por_cat.rename(columns={'monto': 'gasto_real'})
+
+        # Unir SOLO presupuestos del mes con gastos reales
+        comparativa = pd.merge(df_presup_radar, gastos_por_cat, on='categoria', how='left')
+
+        # Limpiar valores nulos y convertirlos a 0
+        if 'gasto_real' not in comparativa.columns:
+            comparativa['gasto_real'] = 0.0
+            
+        comparativa['gasto_real'] = comparativa['gasto_real'].fillna(0)
+        comparativa['limite'] = comparativa['limite'].fillna(0)
+
+        # Cálculos matemáticos limpios
+        comparativa['Desviación'] = comparativa['limite'] - comparativa['gasto_real']
+        
+        # Calculamos el % de ejecución
+        comparativa['% Ejecución'] = comparativa.apply(
+            lambda row: (row['gasto_real'] / row['limite'] * 100) if row['limite'] > 0 else 0,
+            axis=1
+        )
+
+        # Renderizado visual avanzado
+        st.dataframe(
+            comparativa[['categoria', 'limite', 'gasto_real', 'Desviación', '% Ejecución']],
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "categoria": st.column_config.TextColumn("Categoría"),
+                "limite": st.column_config.NumberColumn("Presupuestado", format="$ %d"),
+                "gasto_real": st.column_config.NumberColumn("Gasto Real", format="$ %d"),
+                "Desviación": st.column_config.NumberColumn("Desviación (Restante)", format="$ %d"),
+                "% Ejecución": st.column_config.ProgressColumn(
+                    "% Ejecución", 
+                    format="%d%%", 
+                    min_value=0, 
+                    max_value=100
+                )
+            }
+        )
+    else:
+        st.info(f"Faltan datos de presupuestos o transacciones para generar el radar en {mes_actual_radar}.")
+        
 with pestana_deudas:
     st.subheader("💳 Gestión de deudas")
     
@@ -1329,66 +1389,6 @@ with pestana_patrones:
             
     else:
         st.info("Aún no hay suficientes transacciones registradas este mes para activar el detector de patrones.")
-
-with pestana_control:
-    st.subheader("🎯 Radar de Desviación Presupuestaria")
-
-    # 1. Identificar el mes actual
-    from datetime import datetime
-    mes_actual_radar = datetime.now().strftime("%Y-%m")
-
-    # 2. Filtrar SOLO los presupuestos de este mes para evitar duplicados históricos
-    if not df_presupuestos.empty:
-        df_presup_radar = df_presupuestos[df_presupuestos['mes'] == mes_actual_radar].copy()
-    else:
-        df_presup_radar = pd.DataFrame()
-
-    # 3. Validamos que existan tanto presupuestos de este mes como gastos del mes actual
-    if not df_presup_radar.empty and 'df_mes_actual' in locals() and not df_mes_actual.empty:
-        
-        # Agrupar gastos reales del mes por categoría
-        gastos_por_cat = df_mes_actual.groupby('categoria')['monto'].sum().reset_index()
-        gastos_por_cat = gastos_por_cat.rename(columns={'monto': 'gasto_real'})
-
-        # Unir SOLO presupuestos del mes con gastos reales
-        comparativa = pd.merge(df_presup_radar, gastos_por_cat, on='categoria', how='left')
-
-        # Limpiar valores nulos y convertirlos a 0
-        if 'gasto_real' not in comparativa.columns:
-            comparativa['gasto_real'] = 0.0
-            
-        comparativa['gasto_real'] = comparativa['gasto_real'].fillna(0)
-        comparativa['limite'] = comparativa['limite'].fillna(0)
-
-        # Cálculos matemáticos limpios
-        comparativa['Desviación'] = comparativa['limite'] - comparativa['gasto_real']
-        
-        # Calculamos el % de ejecución
-        comparativa['% Ejecución'] = comparativa.apply(
-            lambda row: (row['gasto_real'] / row['limite'] * 100) if row['limite'] > 0 else 0,
-            axis=1
-        )
-
-        # Renderizado visual avanzado
-        st.dataframe(
-            comparativa[['categoria', 'limite', 'gasto_real', 'Desviación', '% Ejecución']],
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "categoria": st.column_config.TextColumn("Categoría"),
-                "limite": st.column_config.NumberColumn("Presupuestado", format="$ %d"),
-                "gasto_real": st.column_config.NumberColumn("Gasto Real", format="$ %d"),
-                "Desviación": st.column_config.NumberColumn("Desviación (Restante)", format="$ %d"),
-                "% Ejecución": st.column_config.ProgressColumn(
-                    "% Ejecución", 
-                    format="%d%%", 
-                    min_value=0, 
-                    max_value=100
-                )
-            }
-        )
-    else:
-        st.info(f"Faltan datos de presupuestos o transacciones para generar el radar en {mes_actual_radar}.")
 
 st.sidebar.title("Navegación")
 st.sidebar.info(
