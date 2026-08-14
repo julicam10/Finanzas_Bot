@@ -127,19 +127,25 @@ with pestana_trans:
         st.markdown("""
         **Usa los nombres principales (en negrita) al crear tu presupuesto.** El bot clasificará automáticamente los gastos si usas las palabras clave asociadas:
         
-        * **Inversión**: s&p500, tsmc
-        * **Ahorro**: fondeloitte, ahorro personal, ahorro ropa, ahorro viajes
-        * **Casa / Obligaciones**: arriendo
-        * **Mercado**: huevo, proteina, carne, d1, ara, éxito, exito, fruta, verdura
-        * **Comida fuera**: hamburguesa, pizza, papas king, comida fuera
-        * **Carro**: carro, gasolina, arreglo, llave, llanta, parqueadero, peaje, lavadero, soat
+        * **Inversión**: s&p500, tsmc, compra de acciones, inversion en bolsa
+        * **Ahorro viajes**: ahorro viajes
+        * **Ahorro fondeloitte**: fondeloitte
+        * **Arriendo**: arriendo
+        * **Mercado**: huevos, proteina, carne, d1, ara, éxito, exito, frutas, verduras, pollo, mercado
         * **Oficina**: oficina, transmilenio, almuerzo, desayuno
-        * **Bienestar y Cuidado**: barberia, gimnasio, uñas
-        * **Mascota (Alma)**: comida alma, arena alma
+        * **Carro**: carro, gasolina, arreglo, llaves, llantas, parqueadero, peaje, lavadero, soat
+        * **Salidas a comer**: hamburguesa, pizza, papas king, comida fuera
+        * **Gimnasio**: gimnasio, gym
+        * **Barbería**: barberia
+        * **Alma**: comida alma, arena alma
         * **Suscripciones**: netflix, youtube, google fotos
-        * **Servicios**: paquete de datos, datos
-        * **Pago deudas**: crédito hipotecario, credito hipotecario, pago ipad, t.c nu, t.c bancolombia
-        * **Gastos del mes**: salida con amigos, transporte, pasaje, cine, salida *(Esta es también la categoría por defecto)*
+        * **Paquete de datos**: paquete de datos, datos, internet
+        * **Crédito hipotecario**: crédito hipotecario, credito hipotecario
+        * **Pago ipad**: pago ipad, ipad
+        * **T.C Nu**: t.c nu, tarjeta nu
+        * **T.C Bancolombia**: t.c bancolombia, tarjeta bancolombia
+        * **Abono carro**: deuda carro
+        * **Gastos del mes**: salida con amigos, uñas, areglo uñas, transporte, pasaje, cine, salida *(Esta es también la categoría por defecto)*
         """)
     # ---------------------------------------------
 
@@ -409,19 +415,25 @@ with pestana_presupuestos:
         st.markdown("""
         **Usa los nombres principales (en negrita) al crear tu presupuesto.** El bot clasificará automáticamente los gastos si usas las palabras clave asociadas:
         
-        * **Inversión**: s&p500, tsmc
-        * **Ahorro**: fondeloitte, ahorro personal, ahorro ropa, ahorro viajes
-        * **Casa / Obligaciones**: arriendo
-        * **Mercado**: huevo, proteina, carne, d1, ara, éxito, exito, fruta, verdura
-        * **Comida fuera**: hamburguesa, pizza, papas king, comida fuera
-        * **Carro**: carro, gasolina, arreglo, llave, llanta, parqueadero, peaje, lavadero, soat
+        * **Inversión**: s&p500, tsmc, compra de acciones, inversion en bolsa
+        * **Ahorro viajes**: ahorro viajes
+        * **Ahorro fondeloitte**: fondeloitte
+        * **Arriendo**: arriendo
+        * **Mercado**: huevos, proteina, carne, d1, ara, éxito, exito, frutas, verduras, pollo, mercado
         * **Oficina**: oficina, transmilenio, almuerzo, desayuno
-        * **Bienestar y Cuidado**: barberia, gimnasio, uñas
-        * **Mascota (Alma)**: comida alma, arena alma
+        * **Carro**: carro, gasolina, arreglo, llaves, llantas, parqueadero, peaje, lavadero, soat
+        * **Salidas a comer**: hamburguesa, pizza, papas king, comida fuera
+        * **Gimnasio**: gimnasio, gym
+        * **Barbería**: barberia
+        * **Alma**: comida alma, arena alma
         * **Suscripciones**: netflix, youtube, google fotos
-        * **Servicios**: paquete de datos, datos
-        * **Pago deudas**: crédito hipotecario, credito hipotecario, pago ipad, t.c nu, t.c bancolombia
-        * **Gastos del mes**: salida con amigos, transporte, pasaje, cine, salida *(Esta es también la categoría por defecto)*
+        * **Paquete de datos**: paquete de datos, datos, internet
+        * **Crédito hipotecario**: crédito hipotecario, credito hipotecario
+        * **Pago ipad**: pago ipad, ipad
+        * **T.C Nu**: t.c nu, tarjeta nu
+        * **T.C Bancolombia**: t.c bancolombia, tarjeta bancolombia
+        * **Abono carro**: deuda carro
+        * **Gastos del mes**: salida con amigos, uñas, areglo uñas, transporte, pasaje, cine, salida *(Esta es también la categoría por defecto)*
         """)
     
     col_sal1, col_sal2, col_sal3 = st.columns(3)

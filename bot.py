@@ -33,7 +33,7 @@ def normalizar_texto(texto):
 def clasificar_gasto(concepto):
     c_lower = normalizar_texto(concepto)
     
-    if any(w in c_lower for w in ["s&p500", "tsmc"]):
+    if any(w in c_lower for w in ["s&p500", "tsmc", "compra de acciones", "inversion en bolsa"]):
         return "Inversión"
     elif any(w in c_lower for w in ["ahorro viajes"]):
         return "Ahorro viajes"
@@ -41,7 +41,7 @@ def clasificar_gasto(concepto):
         return "Ahorro fondeloitte"
     elif any(w in c_lower for w in ["arriendo"]):
         return "Arriendo"
-    elif any(w in c_lower for w in ["huevos", "proteina", "carne", "d1", "ara", "éxito", "exito", "frutas", "verduras", "pollo"]):
+    elif any(w in c_lower for w in ["huevos", "proteina", "carne", "d1", "ara", "éxito", "exito", "frutas", "verduras", "pollo", "mercado"]):
         return "Mercado"
     elif any(w in c_lower for w in ["oficina", "transmilenio", "almuerzo", "desayuno"]):
         return "Oficina"
@@ -53,8 +53,6 @@ def clasificar_gasto(concepto):
         return "Gimnasio"
     elif any(w in c_lower for w in ["barberia"]):
         return "Barbería"
-    elif any(w in c_lower for w in ["barberia", "gimnasio", "uñas"]):
-        return "Bienestar y Cuidado"
     elif any(w in c_lower for w in ["comida alma", "arena alma"]):
         return "Alma"
     elif any(w in c_lower for w in ["netflix", "youtube", "google fotos"]):
@@ -64,7 +62,7 @@ def clasificar_gasto(concepto):
     elif any(w in c_lower for w in ["crédito hipotecario", "credito hipotecario"]):
         return "Crédito hipotecario"
     elif any(w in c_lower for w in ["pago ipad", "ipad"]):
-        return "Pago iPad"
+        return "Pago ipad"
     elif any(w in c_lower for w in ["t.c nu", "tarjeta nu"]):
         return "T.C Nu"
     elif any(w in c_lower for w in ["t.c bancolombia", "tarjeta bancolombia"]):
